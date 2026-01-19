@@ -1,0 +1,133 @@
+use async_trait::async_trait;
+use oauth2::{
+    basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
+    ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse, TokenUrl,
+};
+use reqwest::Client;
+use secrecy::ExposeSecret;
+
+use super::provider::{OAuthProvider, OAuthTokens, OAuthUserInfo};
+use crate::config::GoogleOAuthConfig;
+use crate::error::{AppError, Result};
+use crate::models::{GoogleUserInfo, ProviderName};
+
+const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
+const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
+const GOOGLE_USERINFO_URL: &str = "https://www.googleapis.com/oauth2/v2/userinfo";
+
+pub struct GoogleOAuthProvider {
+    client: BasicClient,
+    http_client: Client,
+}
+
+impl GoogleOAuthProvider {
+    pub fn new(config: &GoogleOAuthConfig) -> Result<Self> {
+        let auth_url = AuthUrl::new(GOOGLE_AUTH_URL.to_string())
+            .map_err(|e| AppError::OAuth(format!("Invalid auth URL: {}", e)))?;
+        let token_url = TokenUrl::new(GOOGLE_TOKEN_URL.to_string())
+            .map_err(|e| AppError::OAuth(format!("Invalid token URL: {}", e)))?;
+        let redirect_url = RedirectUrl::new(config.redirect_uri.clone())
+            .map_err(|e| AppError::OAuth(format!("Invalid redirect URI: {}", e)))?;
+
+        let client = BasicClient::new(
+            ClientId::new(config.client_id.expose_secret().clone()),
+            Some(ClientSecret::new(config.client_secret.expose_secret().clone())),
+            auth_url,
+            Some(token_url),
+        )
+        .set_redirect_uri(redirect_url);
+
+        let http_client = Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| AppError::OAuth(format!("Failed to create HTTP client: {}", e)))?;
+
+        Ok(Self {
+            client,
+            http_client,
+        })
+    }
+}
+
+#[async_trait]
+impl OAuthProvider for GoogleOAuthProvider {
+    fn name(&self) -> ProviderName {
+        ProviderName::Google
+    }
+
+    fn authorization_url(&self, state: &str, scopes: &[&str]) -> String {
+        let scopes_to_use: Vec<Scope> = if scopes.is_empty() {
+            self.default_scopes()
+                .iter()
+                .map(|s| Scope::new(s.to_string()))
+                .collect()
+        } else {
+            scopes.iter().map(|s| Scope::new(s.to_string())).collect()
+        };
+
+        let mut auth_request = self
+            .client
+            .authorize_url(|| CsrfToken::new(state.to_string()));
+
+        for scope in scopes_to_use {
+            auth_request = auth_request.add_scope(scope);
+        }
+
+        let (url, _) = auth_request.url();
+        url.to_string()
+    }
+
+    async fn exchange_code(&self, code: &str) -> Result<OAuthTokens> {
+        let token_result = self
+            .client
+            .exchange_code(AuthorizationCode::new(code.to_string()))
+            .request_async(async_http_client)
+            .await
+            .map_err(|e| AppError::OAuth(format!("Failed to exchange code: {:?}", e)))?;
+
+        Ok(OAuthTokens {
+            access_token: token_result.access_token().secret().clone(),
+            refresh_token: token_result.refresh_token().map(|t| t.secret().clone()),
+            expires_in: token_result.expires_in().map(|d| d.as_secs()),
+            scope: token_result
+                .scopes()
+                .map(|s| s.iter().map(|sc| sc.to_string()).collect::<Vec<_>>().join(" ")),
+        })
+    }
+
+    async fn get_user_info(&self, access_token: &str) -> Result<OAuthUserInfo> {
+        let response = self
+            .http_client
+            .get(GOOGLE_USERINFO_URL)
+            .bearer_auth(access_token)
+            .send()
+            .await
+            .map_err(|e| AppError::OAuth(format!("Failed to get user info: {}", e)))?;
+
+        if !response.status().is_success() {
+            let error_body = response.text().await.unwrap_or_default();
+            return Err(AppError::OAuth(format!(
+                "Google API error: {}",
+                error_body
+            )));
+        }
+
+        let user_info: GoogleUserInfo = response
+            .json()
+            .await
+            .map_err(|e| AppError::OAuth(format!("Failed to parse user info: {}", e)))?;
+
+        Ok(OAuthUserInfo {
+            provider: ProviderName::Google,
+            provider_user_id: user_info.id,
+            email: user_info.email,
+            email_verified: user_info.verified_email.unwrap_or(false),
+            display_name: user_info.name,
+            profile_picture_url: user_info.picture,
+        })
+    }
+
+    fn default_scopes(&self) -> Vec<&'static str> {
+        vec!["openid", "email", "profile"]
+    }
+}

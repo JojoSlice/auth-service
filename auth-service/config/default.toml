@@ -1,0 +1,24 @@
+[server]
+host = "127.0.0.1"
+port = 3000
+request_timeout_seconds = 30
+
+[database]
+max_connections = 5
+min_connections = 1
+connection_timeout_seconds = 5
+
+[security]
+require_https = false
+
+[rate_limit]
+enabled = true
+global_per_minute = 100
+oauth_init_per_minute = 10
+
+[logging]
+level = "info"
+format = "pretty"
+
+[ip_filter]
+enable_ip_whitelist = false

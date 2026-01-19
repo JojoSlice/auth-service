@@ -1,0 +1,9 @@
+[server]
+host = "127.0.0.1"
+
+[logging]
+level = "debug"
+format = "pretty"
+
+[security]
+require_https = false

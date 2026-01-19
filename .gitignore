@@ -1,0 +1,39 @@
+# Rust
+*/target
+Cargo.lock
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Database
+/data/*.db
+/data/*.db-shm
+/data/*.db-wal
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# JWT keys (if stored as files)
+*.pem
+private-key.*
+public-key.*
+
+# Backup files
+*.bak
+
+# Claude
+*.Claude
+
