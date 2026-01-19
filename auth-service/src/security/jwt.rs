@@ -1,3 +1,4 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use secrecy::ExposeSecret;
@@ -15,10 +16,24 @@ pub struct JwtService {
     refresh_token_expiration_days: i64,
 }
 
+/// Decode a PEM key that may be base64 encoded or contain literal \n
+fn decode_pem_key(key: &str) -> String {
+    // If it starts with base64 chars and doesn't look like PEM, try to decode
+    if !key.starts_with("-----") {
+        if let Ok(decoded) = STANDARD.decode(key.trim()) {
+            if let Ok(pem_str) = String::from_utf8(decoded) {
+                return pem_str;
+            }
+        }
+    }
+    // Otherwise, just replace literal \n with actual newlines
+    key.replace("\\n", "\n")
+}
+
 impl JwtService {
     pub fn new(config: &JwtConfig) -> Result<Self> {
-        let private_key_pem = config.private_key.expose_secret();
-        let public_key_pem = &config.public_key;
+        let private_key_pem = decode_pem_key(config.private_key.expose_secret());
+        let public_key_pem = decode_pem_key(&config.public_key);
 
         let encoding_key = EncodingKey::from_ec_pem(private_key_pem.as_bytes())
             .map_err(|e| AppError::InternalServerError(format!("Invalid JWT private key: {}", e)))?;

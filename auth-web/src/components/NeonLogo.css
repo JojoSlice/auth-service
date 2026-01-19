@@ -1,0 +1,49 @@
+.neon-header {
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.neon-logo {
+  margin: 0;
+}
+
+.neon-text {
+  animation: neon-pulse 2s ease-in-out infinite;
+  color: #fff;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-shadow:
+    0 0 5px #ff1744,
+    0 0 10px #ff1744,
+    0 0 20px #ff1744,
+    0 0 40px #ff1744,
+    0 0 80px rgba(255, 23, 68, 0.5);
+  text-transform: uppercase;
+}
+
+@keyframes neon-pulse {
+  0%, 100% {
+    text-shadow:
+      0 0 5px #ff1744,
+      0 0 10px #ff1744,
+      0 0 20px #ff1744,
+      0 0 40px #ff1744,
+      0 0 80px rgba(255, 23, 68, 0.5);
+  }
+  50% {
+    text-shadow:
+      0 0 2px #ff1744,
+      0 0 5px #ff1744,
+      0 0 10px #ff1744,
+      0 0 20px #ff1744,
+      0 0 40px rgba(255, 23, 68, 0.3);
+  }
+}
+
+@media (max-width: 480px) {
+  .neon-text {
+    font-size: 1.75rem;
+  }
+}

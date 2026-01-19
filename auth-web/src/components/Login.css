@@ -1,0 +1,125 @@
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.login-card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 12px;
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 380px;
+}
+
+.login-title {
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  text-align: center;
+}
+
+.login-subtitle {
+  color: #888;
+  font-size: 0.875rem;
+  margin: 0 0 2rem;
+  text-align: center;
+}
+
+.login-error {
+  background: rgba(255, 70, 70, 0.1);
+  border: 1px solid rgba(255, 70, 70, 0.3);
+  border-radius: 8px;
+  color: #ff6b6b;
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  text-align: center;
+}
+
+.login-warning {
+  background: rgba(255, 180, 70, 0.1);
+  border: 1px solid rgba(255, 180, 70, 0.3);
+  border-radius: 8px;
+  color: #ffb446;
+  font-size: 0.8125rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  text-align: center;
+}
+
+.login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.login-btn {
+  align-items: center;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  gap: 0.75rem;
+  justify-content: center;
+  padding: 0.875rem 1.25rem;
+  transition: all 0.2s ease;
+}
+
+.login-btn:hover:not(:disabled) {
+  background: #333;
+  border-color: #4a4a4a;
+}
+
+.login-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.login-btn-google:hover:not(:disabled) {
+  border-color: #4285f4;
+  box-shadow: 0 0 0 1px rgba(66, 133, 244, 0.2);
+}
+
+.login-btn-github:hover:not(:disabled) {
+  border-color: #6e5494;
+  box-shadow: 0 0 0 1px rgba(110, 84, 148, 0.2);
+}
+
+.login-icon {
+  flex-shrink: 0;
+  height: 20px;
+  width: 20px;
+}
+
+.login-loading {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.login-spinner {
+  animation: spin 1s linear infinite;
+  border: 2px solid #333;
+  border-radius: 50%;
+  border-top-color: #fff;
+  height: 24px;
+  width: 24px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
