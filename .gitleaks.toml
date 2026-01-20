@@ -1,0 +1,91 @@
+# Gitleaks configuration for Bibblo
+# https://github.com/gitleaks/gitleaks
+
+title = "Bibblo Gitleaks Configuration"
+
+[extend]
+# Extend the default gitleaks configuration
+useDefault = true
+
+# ============================================
+# Custom rules for Bibblo-specific secrets
+# ============================================
+
+[[rules]]
+id = "bibblo-jwt-secret"
+description = "Bibblo JWT Secret Key"
+regex = '''(?i)(jwt[_-]?secret|jwt[_-]?key|token[_-]?secret)\s*[=:]\s*["']?[a-zA-Z0-9+/=]{32,}["']?'''
+tags = ["jwt", "secret", "bibblo"]
+
+[[rules]]
+id = "bibblo-oauth-secret"
+description = "Bibblo OAuth Client Secret"
+regex = '''(?i)(oauth[_-]?secret|client[_-]?secret|google[_-]?secret|github[_-]?secret)\s*[=:]\s*["']?[a-zA-Z0-9_-]{20,}["']?'''
+tags = ["oauth", "secret", "bibblo"]
+
+[[rules]]
+id = "bibblo-encryption-key"
+description = "Bibblo Encryption Key"
+regex = '''(?i)(encryption[_-]?key|aes[_-]?key|master[_-]?key)\s*[=:]\s*["']?[a-zA-Z0-9+/=]{32,}["']?'''
+tags = ["encryption", "secret", "bibblo"]
+
+[[rules]]
+id = "bibblo-database-password"
+description = "Database Password"
+regex = '''(?i)(db[_-]?password|database[_-]?password|postgres[_-]?password|mysql[_-]?password|sqlite[_-]?password)\s*[=:]\s*["']?[^\s"']{8,}["']?'''
+tags = ["database", "password", "bibblo"]
+
+[[rules]]
+id = "bibblo-api-key"
+description = "Bibblo API Key"
+regex = '''(?i)(api[_-]?key|apikey)\s*[=:]\s*["']?[a-zA-Z0-9_-]{20,}["']?'''
+tags = ["api", "key", "bibblo"]
+
+# ============================================
+# Allowlist - Files and patterns to ignore
+# ============================================
+
+[allowlist]
+description = "Allowlisted files and patterns"
+
+# Files to completely ignore
+paths = [
+    '''\.env\.example$''',
+    '''\.env\.template$''',
+    '''README\.md$''',
+    '''docs/.*\.md$''',
+    '''\.gitleaks\.toml$''',
+    '''package-lock\.json$''',
+    '''Cargo\.lock$''',
+    '''node_modules/.*''',
+    '''target/.*''',
+    '''dist/.*''',
+]
+
+# Regex patterns to ignore (e.g., placeholder values)
+regexes = [
+    '''your[_-]?secret[_-]?here''',
+    '''REPLACE[_-]?ME''',
+    '''<your[_-]?.*>''',
+    '''example[_-]?secret''',
+    '''test[_-]?secret''',
+    '''dummy[_-]?key''',
+    '''placeholder''',
+    '''xxx+''',
+    '''yyy+''',
+]
+
+# Specific commits to ignore (add if needed)
+commits = []
+
+# Stop words that indicate non-secret values
+stopwords = [
+    "example",
+    "sample",
+    "test",
+    "dummy",
+    "fake",
+    "placeholder",
+    "your_",
+    "my_",
+]
