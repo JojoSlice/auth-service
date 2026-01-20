@@ -2,6 +2,15 @@ import express, { Request, Response, NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 
+// Auth service response types
+interface AuthTokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+  user?: unknown;
+  error?: string;
+}
+
 const app = express();
 
 // Configuration from environment
@@ -57,10 +66,10 @@ app.use(cors({
 // Helper to forward requests to auth-service
 async function authServiceRequest(
   endpoint: string,
-  options: RequestInit = {}
+  options: { method?: string; headers?: Record<string, string>; body?: string } = {}
 ): Promise<globalThis.Response> {
   const url = `${AUTH_SERVICE_URL}${endpoint}`;
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-api-key': AUTH_API_KEY,
     ...options.headers,
@@ -119,7 +128,7 @@ app.get('/api/auth/:provider/callback', async (req: Request, res: Response) => {
       `/api/v1/auth/oauth/${provider}/callback?${params}`
     );
 
-    const data = await response.json();
+    const data = await response.json() as AuthTokenResponse;
 
     if (!response.ok) {
       return res.status(response.status).json(data);
@@ -161,7 +170,7 @@ app.post('/api/auth/refresh', async (req: Request, res: Response) => {
       body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
-    const data = await response.json();
+    const data = await response.json() as AuthTokenResponse;
 
     if (!response.ok) {
       // Clear cookies on refresh failure
