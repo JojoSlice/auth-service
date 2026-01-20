@@ -163,7 +163,7 @@ impl JwtService {
 
         // Try current key first
         match decode::<AccessTokenClaims>(token, &self.decoding_key, &validation) {
-            Ok(token_data) => return Ok(token_data.claims),
+            Ok(token_data) => Ok(token_data.claims),
             Err(e) => {
                 // If we have a previous key and the error isn't expiration, try it
                 if let Some(ref prev_key) = self.previous_decoding_key {
@@ -177,10 +177,10 @@ impl JwtService {
                     }
                 }
                 // Return the original error
-                return Err(match e.kind() {
+                Err(match e.kind() {
                     jsonwebtoken::errors::ErrorKind::ExpiredSignature => AppError::TokenExpired,
                     _ => AppError::InvalidToken,
-                });
+                })
             }
         }
     }
@@ -192,7 +192,7 @@ impl JwtService {
 
         // Try current key first
         match decode::<RefreshTokenClaims>(token, &self.decoding_key, &validation) {
-            Ok(token_data) => return Ok(token_data.claims),
+            Ok(token_data) => Ok(token_data.claims),
             Err(e) => {
                 // If we have a previous key and the error isn't expiration, try it
                 if let Some(ref prev_key) = self.previous_decoding_key {
@@ -206,10 +206,10 @@ impl JwtService {
                     }
                 }
                 // Return the original error
-                return Err(match e.kind() {
+                Err(match e.kind() {
                     jsonwebtoken::errors::ErrorKind::ExpiredSignature => AppError::TokenExpired,
                     _ => AppError::InvalidToken,
-                });
+                })
             }
         }
     }

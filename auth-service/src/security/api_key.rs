@@ -21,7 +21,7 @@ impl ApiKeyService {
 
     pub fn generate_api_key(&self) -> (String, String, String) {
         let mut key_bytes = [0u8; API_KEY_LENGTH];
-        rand::thread_rng().fill_bytes(&mut key_bytes);
+        rand::rng().fill_bytes(&mut key_bytes);
 
         let key = format!("bib_{}", BASE64_URL.encode(key_bytes));
         let prefix = key[..PREFIX_LENGTH.min(key.len())].to_string();
@@ -68,7 +68,7 @@ impl Clone for ApiKeyService {
 
 pub fn generate_random_string(length: usize) -> String {
     let mut bytes = vec![0u8; length];
-    rand::thread_rng().fill_bytes(&mut bytes);
+    rand::rng().fill_bytes(&mut bytes);
     BASE64_URL.encode(&bytes)
 }
 

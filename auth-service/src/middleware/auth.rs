@@ -64,9 +64,7 @@ pub async fn auth_middleware(
         }
     };
 
-    let token = if auth_header.starts_with("Bearer ") {
-        &auth_header[7..]
-    } else {
+    let Some(token) = auth_header.strip_prefix("Bearer ") else {
         return (
             StatusCode::UNAUTHORIZED,
             Json(json!({
@@ -111,8 +109,7 @@ pub async fn optional_auth_middleware(
 ) -> Response {
     if let Some(auth_header) = request.headers().get(header::AUTHORIZATION) {
         if let Ok(auth_str) = auth_header.to_str() {
-            if auth_str.starts_with("Bearer ") {
-                let token = &auth_str[7..];
+            if let Some(token) = auth_str.strip_prefix("Bearer ") {
                 if let Ok(claims) = state.jwt_service.verify_access_token(token) {
                     let user: AuthenticatedUser = claims.into();
                     request.extensions_mut().insert(user);

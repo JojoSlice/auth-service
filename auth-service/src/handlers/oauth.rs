@@ -117,22 +117,22 @@ pub async fn oauth_callback(
         .and_then(|v| v.to_str().ok());
 
     // Check if IP is locked out due to previous suspicious activity
-    if let Some(lockout) = state.anomaly_detection_service.check_ip_lockout(ip) {
-        if let AnomalyResult::BruteForceDetected { lockout_until, .. } = lockout {
+    if let Some(AnomalyResult::BruteForceDetected { lockout_until, .. }) =
+        state.anomaly_detection_service.check_ip_lockout(ip)
+    {
             tracing::warn!(
                 ip = %ip,
                 lockout_until = %lockout_until,
                 "OAuth callback blocked - IP is locked out"
             );
-            return (
-                StatusCode::TOO_MANY_REQUESTS,
-                Json(serde_json::json!({
-                    "error": "too_many_requests",
-                    "error_description": "Too many failed attempts. Please try again later."
-                })),
-            )
-                .into_response();
-        }
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(serde_json::json!({
+                "error": "too_many_requests",
+                "error_description": "Too many failed attempts. Please try again later."
+            })),
+        )
+            .into_response();
     }
 
     // Extract device info for token binding

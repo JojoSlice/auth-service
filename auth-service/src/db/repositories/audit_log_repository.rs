@@ -28,7 +28,7 @@ impl AuditLogRepository {
         .bind(&log.request_id)
         .bind(&log.endpoint)
         .bind(&log.http_method)
-        .bind(&log.status_code)
+        .bind(log.status_code)
         .bind(&log.error_message)
         .bind(&log.metadata)
         .execute(&self.pool)

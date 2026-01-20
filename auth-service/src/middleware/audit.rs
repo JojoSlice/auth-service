@@ -80,7 +80,7 @@ fn determine_event_type(path: &str, method: &str, status_code: i32) -> Option<Au
     }
 
     if path.contains("/auth/oauth") && path.contains("/callback") {
-        if status_code >= 200 && status_code < 300 {
+        if (200..300).contains(&status_code) {
             return Some(AuditEventType::OAuthSuccess);
         } else {
             return Some(AuditEventType::OAuthFailure);
@@ -92,7 +92,7 @@ fn determine_event_type(path: &str, method: &str, status_code: i32) -> Option<Au
     }
 
     if path.contains("/token/validate") && method == "POST" {
-        if status_code >= 200 && status_code < 300 {
+        if (200..300).contains(&status_code) {
             return Some(AuditEventType::TokenValidated);
         } else {
             return Some(AuditEventType::TokenValidationFailed);

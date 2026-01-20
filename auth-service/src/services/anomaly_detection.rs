@@ -63,19 +63,10 @@ impl Default for AnomalyConfig {
 }
 
 /// Tracks login attempts for an IP address
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct IpLoginAttempts {
     failed_attempts: VecDeque<DateTime<Utc>>,
     lockout_until: Option<DateTime<Utc>>,
-}
-
-impl Default for IpLoginAttempts {
-    fn default() -> Self {
-        Self {
-            failed_attempts: VecDeque::new(),
-            lockout_until: None,
-        }
-    }
 }
 
 /// Tracks user login history for anomaly detection
@@ -149,7 +140,7 @@ impl AnomalyDetectionService {
         while entry
             .failed_attempts
             .front()
-            .map_or(false, |t| *t < window_start)
+            .is_some_and(|t| *t < window_start)
         {
             entry.failed_attempts.pop_front();
         }
