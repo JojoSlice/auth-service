@@ -1,0 +1,2 @@
+[advisories]
+ignore = ["RUSTSEC-2023-0071"]  # rsa: transitive dep via sqlx-mysql, MySQL not used
