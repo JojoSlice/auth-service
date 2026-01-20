@@ -4,7 +4,7 @@ use aes_gcm::{
 };
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use rand::RngCore;
-use secrecy::{ExposeSecret, Secret};
+use secrecy::{ExposeSecret, SecretString};
 
 use crate::error::{AppError, Result};
 
@@ -15,7 +15,7 @@ pub struct EncryptionService {
 }
 
 impl EncryptionService {
-    pub fn new(key: &Secret<String>) -> Result<Self> {
+    pub fn new(key: &SecretString) -> Result<Self> {
         let key_bytes = Self::derive_key(key.expose_secret())?;
         let cipher = Aes256Gcm::new_from_slice(&key_bytes)
             .map_err(|e| AppError::InternalServerError(format!("Invalid encryption key: {}", e)))?;

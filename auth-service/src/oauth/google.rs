@@ -1,7 +1,10 @@
 use async_trait::async_trait;
 use oauth2::{
-    basic::BasicClient, reqwest::async_http_client, AuthUrl, AuthorizationCode, ClientId,
-    ClientSecret, CsrfToken, RedirectUrl, Scope, TokenResponse, TokenUrl,
+    basic::{BasicClient, BasicErrorResponseType, BasicTokenType},
+    AuthUrl, AuthorizationCode, ClientId, ClientSecret, CsrfToken, EmptyExtraTokenFields,
+    EndpointNotSet, EndpointSet, RedirectUrl, RevocationErrorResponseType, Scope,
+    StandardErrorResponse, StandardRevocableToken, StandardTokenIntrospectionResponse,
+    StandardTokenResponse, TokenResponse, TokenUrl,
 };
 use reqwest::Client;
 use secrecy::ExposeSecret;
@@ -15,8 +18,22 @@ const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL: &str = "https://www.googleapis.com/oauth2/v2/userinfo";
 
+/// OAuth2 client with auth and token endpoints configured
+type ConfiguredClient = oauth2::Client<
+    StandardErrorResponse<BasicErrorResponseType>,
+    StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
+    StandardTokenIntrospectionResponse<EmptyExtraTokenFields, BasicTokenType>,
+    StandardRevocableToken,
+    StandardErrorResponse<RevocationErrorResponseType>,
+    EndpointSet,
+    EndpointNotSet,
+    EndpointNotSet,
+    EndpointNotSet,
+    EndpointSet,
+>;
+
 pub struct GoogleOAuthProvider {
-    client: BasicClient,
+    client: ConfiguredClient,
     http_client: Client,
 }
 
@@ -29,15 +46,13 @@ impl GoogleOAuthProvider {
         let redirect_url = RedirectUrl::new(config.redirect_uri.clone())
             .map_err(|e| AppError::OAuth(format!("Invalid redirect URI: {}", e)))?;
 
-        let client = BasicClient::new(
-            ClientId::new(config.client_id.expose_secret().clone()),
-            Some(ClientSecret::new(
-                config.client_secret.expose_secret().clone(),
-            )),
-            auth_url,
-            Some(token_url),
-        )
-        .set_redirect_uri(redirect_url);
+        let client = BasicClient::new(ClientId::new(config.client_id.expose_secret().to_string()))
+            .set_client_secret(ClientSecret::new(
+                config.client_secret.expose_secret().to_string(),
+            ))
+            .set_auth_uri(auth_url)
+            .set_token_uri(token_url)
+            .set_redirect_uri(redirect_url);
 
         let http_client = Client::builder()
             .timeout(std::time::Duration::from_secs(30))
@@ -80,10 +95,11 @@ impl OAuthProvider for GoogleOAuthProvider {
     }
 
     async fn exchange_code(&self, code: &str) -> Result<OAuthTokens> {
+        let http_client = self.http_client.clone();
         let token_result = self
             .client
             .exchange_code(AuthorizationCode::new(code.to_string()))
-            .request_async(async_http_client)
+            .request_async(&http_client)
             .await
             .map_err(|e| AppError::OAuth(format!("Failed to exchange code: {:?}", e)))?;
 

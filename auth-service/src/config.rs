@@ -1,5 +1,5 @@
 use config::{Config, ConfigError, Environment, File};
-use secrecy::Secret;
+use secrecy::SecretString;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -53,7 +53,7 @@ fn default_connection_timeout() -> u64 {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct JwtConfig {
-    pub private_key: Secret<String>,
+    pub private_key: SecretString,
     pub public_key: String,
     /// Previous public key for key rotation - allows validation during transition period
     #[serde(default)]
@@ -88,22 +88,22 @@ pub struct OAuthConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct GoogleOAuthConfig {
-    pub client_id: Secret<String>,
-    pub client_secret: Secret<String>,
+    pub client_id: SecretString,
+    pub client_secret: SecretString,
     pub redirect_uri: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct GitHubOAuthConfig {
-    pub client_id: Secret<String>,
-    pub client_secret: Secret<String>,
+    pub client_id: SecretString,
+    pub client_secret: SecretString,
     pub redirect_uri: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct SecurityConfig {
-    pub encryption_key: Secret<String>,
-    pub api_key_salt: Secret<String>,
+    pub encryption_key: SecretString,
+    pub api_key_salt: SecretString,
     #[serde(default = "default_require_https")]
     pub require_https: bool,
 }

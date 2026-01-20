@@ -6,26 +6,26 @@ description = "OAuth Authentication Service with Google and GitHub support"
 
 [dependencies]
 # Web framework
-axum = { version = "0.7", features = ["macros"] }
-axum-extra = { version = "0.9", features = ["typed-header"] }
+axum = { version = "0.8", features = ["macros"] }
+axum-extra = { version = "0.10", features = ["typed-header"] }
 tokio = { version = "1", features = ["full"] }
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace", "request-id", "util"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "request-id", "util"] }
 
 # Database
-sqlx = { version = "0.7", features = ["runtime-tokio", "sqlite", "migrate", "chrono", "uuid"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "migrate", "chrono", "uuid"] }
 
 # OAuth & Authentication
-oauth2 = "4.4"
-reqwest = { version = "0.11", features = ["json"] }
+oauth2 = "5.0"
+reqwest = { version = "0.12", features = ["json"] }
 jsonwebtoken = "9"
 
 # Security
 argon2 = "0.5"
-secrecy = { version = "0.8", features = ["serde"] }
-tower_governor = "0.3"
+secrecy = { version = "0.10", features = ["serde"] }
+tower_governor = "0.4"
 aes-gcm = "0.10"
-base64 = "0.21"
+base64 = "0.22"
 ipnetwork = "0.20"
 rand = "0.8"
 sha2 = "0.10"
@@ -40,10 +40,10 @@ dotenvy = "0.15"
 # Utilities
 uuid = { version = "1", features = ["serde", "v4"] }
 chrono = { version = "0.4", features = ["serde"] }
-thiserror = "1"
+thiserror = "2"
 anyhow = "1"
 async-trait = "0.1"
-dashmap = "5"
+dashmap = "6"
 parking_lot = "0.12"
 
 # Logging
@@ -51,8 +51,8 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Validation
-validator = { version = "0.18", features = ["derive"] }
+validator = { version = "0.20", features = ["derive"] }
 
 [dev-dependencies]
-axum-test = "14"
+axum-test = "16"
 wiremock = "0.6"
