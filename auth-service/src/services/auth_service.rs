@@ -33,7 +33,8 @@ impl AuthService {
     }
 
     pub fn create_oauth_state(&self, client_project: &str, redirect_uri: Option<String>) -> String {
-        self.state_manager.create_state(client_project, redirect_uri)
+        self.state_manager
+            .create_state(client_project, redirect_uri)
     }
 
     pub fn validate_and_consume_state(&self, state: &str) -> Result<(String, Option<String>)> {
@@ -87,7 +88,11 @@ impl AuthService {
             .find_by_provider_user(user_info.provider, &user_info.provider_user_id)
             .await?
         {
-            if let Some(user) = self.user_repository.find_by_id(&oauth_provider.user_id).await? {
+            if let Some(user) = self
+                .user_repository
+                .find_by_id(&oauth_provider.user_id)
+                .await?
+            {
                 if !user.is_active {
                     return Err(AppError::Forbidden);
                 }
@@ -130,20 +135,16 @@ impl AuthService {
             None
         };
 
-        let expires_at = tokens.expires_in.map(|secs| {
-            (Utc::now() + chrono::Duration::seconds(secs as i64)).to_rfc3339()
-        });
+        let expires_at = tokens
+            .expires_in
+            .map(|secs| (Utc::now() + chrono::Duration::seconds(secs as i64)).to_rfc3339());
 
         let oauth_provider = OAuthProvider::new(
             user_id.to_string(),
             user_info.provider,
             user_info.provider_user_id.clone(),
         )
-        .with_tokens(
-            access_token_encrypted,
-            refresh_token_encrypted,
-            expires_at,
-        );
+        .with_tokens(access_token_encrypted, refresh_token_encrypted, expires_at);
 
         let oauth_provider = if let Some(ref scope) = tokens.scope {
             oauth_provider.with_scope(scope.clone())
@@ -151,7 +152,9 @@ impl AuthService {
             oauth_provider
         };
 
-        self.oauth_provider_repository.upsert(&oauth_provider).await?;
+        self.oauth_provider_repository
+            .upsert(&oauth_provider)
+            .await?;
 
         Ok(())
     }

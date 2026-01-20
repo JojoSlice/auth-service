@@ -37,8 +37,9 @@ impl JwtService {
         let private_key_pem = decode_pem_key(config.private_key.expose_secret());
         let public_key_pem = decode_pem_key(&config.public_key);
 
-        let encoding_key = EncodingKey::from_ec_pem(private_key_pem.as_bytes())
-            .map_err(|e| AppError::InternalServerError(format!("Invalid JWT private key: {}", e)))?;
+        let encoding_key = EncodingKey::from_ec_pem(private_key_pem.as_bytes()).map_err(|e| {
+            AppError::InternalServerError(format!("Invalid JWT private key: {}", e))
+        })?;
 
         let decoding_key = DecodingKey::from_ec_pem(public_key_pem.as_bytes())
             .map_err(|e| AppError::InternalServerError(format!("Invalid JWT public key: {}", e)))?;
@@ -46,14 +47,19 @@ impl JwtService {
         // Load previous key if configured (for key rotation)
         let previous_decoding_key = if let Some(ref prev_key) = config.previous_public_key {
             let prev_key_pem = decode_pem_key(prev_key);
-            Some(DecodingKey::from_ec_pem(prev_key_pem.as_bytes())
-                .map_err(|e| AppError::InternalServerError(format!("Invalid previous JWT public key: {}", e)))?)
+            Some(
+                DecodingKey::from_ec_pem(prev_key_pem.as_bytes()).map_err(|e| {
+                    AppError::InternalServerError(format!("Invalid previous JWT public key: {}", e))
+                })?,
+            )
         } else {
             None
         };
 
         if previous_decoding_key.is_some() {
-            tracing::info!("JWT key rotation enabled - validating against current and previous keys");
+            tracing::info!(
+                "JWT key rotation enabled - validating against current and previous keys"
+            );
         }
 
         Ok(Self {
@@ -162,7 +168,9 @@ impl JwtService {
                 // If we have a previous key and the error isn't expiration, try it
                 if let Some(ref prev_key) = self.previous_decoding_key {
                     if !matches!(e.kind(), jsonwebtoken::errors::ErrorKind::ExpiredSignature) {
-                        if let Ok(token_data) = decode::<AccessTokenClaims>(token, prev_key, &validation) {
+                        if let Ok(token_data) =
+                            decode::<AccessTokenClaims>(token, prev_key, &validation)
+                        {
                             tracing::debug!("Token validated with previous key");
                             return Ok(token_data.claims);
                         }
@@ -189,7 +197,9 @@ impl JwtService {
                 // If we have a previous key and the error isn't expiration, try it
                 if let Some(ref prev_key) = self.previous_decoding_key {
                     if !matches!(e.kind(), jsonwebtoken::errors::ErrorKind::ExpiredSignature) {
-                        if let Ok(token_data) = decode::<RefreshTokenClaims>(token, prev_key, &validation) {
+                        if let Ok(token_data) =
+                            decode::<RefreshTokenClaims>(token, prev_key, &validation)
+                        {
                             tracing::debug!("Refresh token validated with previous key");
                             return Ok(token_data.claims);
                         }

@@ -75,8 +75,9 @@ impl EncryptionService {
             .decrypt(nonce, ciphertext)
             .map_err(|_| AppError::InternalServerError("Decryption failed".to_string()))?;
 
-        String::from_utf8(plaintext)
-            .map_err(|e| AppError::InternalServerError(format!("Invalid UTF-8 in decrypted data: {}", e)))
+        String::from_utf8(plaintext).map_err(|e| {
+            AppError::InternalServerError(format!("Invalid UTF-8 in decrypted data: {}", e))
+        })
     }
 }
 

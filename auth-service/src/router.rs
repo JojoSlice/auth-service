@@ -76,10 +76,7 @@ pub fn create_router(state: AppState) -> Router {
             delete(handlers::revoke_api_key),
         )
         .route("/api/v1/admin/audit-logs", get(handlers::get_audit_logs))
-        .route(
-            "/api/v1/admin/ip-filters",
-            post(handlers::create_ip_filter),
-        )
+        .route("/api/v1/admin/ip-filters", post(handlers::create_ip_filter))
         .route(
             "/api/v1/admin/ip-filters/{filter_type}",
             get(handlers::list_ip_filters),

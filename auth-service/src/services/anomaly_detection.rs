@@ -9,9 +9,15 @@ pub enum AnomalyResult {
     /// No anomaly detected
     Normal,
     /// Too many failed login attempts - account should be temporarily locked
-    BruteForceDetected { attempts: u32, lockout_until: DateTime<Utc> },
+    BruteForceDetected {
+        attempts: u32,
+        lockout_until: DateTime<Utc>,
+    },
     /// Login from unusual location
-    UnusualLocation { previous_ip: String, current_ip: String },
+    UnusualLocation {
+        previous_ip: String,
+        current_ip: String,
+    },
     /// Impossible travel detected (login from far locations in short time)
     ImpossibleTravel {
         previous_location: String,
@@ -140,7 +146,11 @@ impl AnomalyDetectionService {
         let mut entry = self.ip_attempts.entry(ip.to_string()).or_default();
 
         // Remove old attempts outside the window
-        while entry.failed_attempts.front().map_or(false, |t| *t < window_start) {
+        while entry
+            .failed_attempts
+            .front()
+            .map_or(false, |t| *t < window_start)
+        {
             entry.failed_attempts.pop_front();
         }
 
@@ -250,12 +260,7 @@ impl AnomalyDetectionService {
     }
 
     /// Record a successful login
-    pub fn record_successful_login(
-        &self,
-        user_id: &str,
-        ip: &str,
-        user_agent: Option<&str>,
-    ) {
+    pub fn record_successful_login(&self, user_id: &str, ip: &str, user_agent: Option<&str>) {
         let now = Utc::now();
         let ip_subnet = extract_ip_subnet(ip);
 
@@ -302,7 +307,10 @@ impl AnomalyDetectionService {
                 }
             }
 
-            attempts.failed_attempts.iter().any(|t| now.signed_duration_since(*t) < window)
+            attempts
+                .failed_attempts
+                .iter()
+                .any(|t| now.signed_duration_since(*t) < window)
         });
 
         tracing::debug!("Anomaly detection cleanup completed");

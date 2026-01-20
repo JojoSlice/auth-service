@@ -32,7 +32,9 @@ impl GitHubOAuthProvider {
 
         let client = BasicClient::new(
             ClientId::new(config.client_id.expose_secret().clone()),
-            Some(ClientSecret::new(config.client_secret.expose_secret().clone())),
+            Some(ClientSecret::new(
+                config.client_secret.expose_secret().clone(),
+            )),
             auth_url,
             Some(token_url),
         )
@@ -121,9 +123,12 @@ impl OAuthProvider for GitHubOAuthProvider {
             access_token: token_result.access_token().secret().clone(),
             refresh_token: token_result.refresh_token().map(|t| t.secret().clone()),
             expires_in: token_result.expires_in().map(|d| d.as_secs()),
-            scope: token_result
-                .scopes()
-                .map(|s| s.iter().map(|sc| sc.to_string()).collect::<Vec<_>>().join(" ")),
+            scope: token_result.scopes().map(|s| {
+                s.iter()
+                    .map(|sc| sc.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            }),
         })
     }
 
@@ -139,10 +144,7 @@ impl OAuthProvider for GitHubOAuthProvider {
 
         if !response.status().is_success() {
             let error_body = response.text().await.unwrap_or_default();
-            return Err(AppError::OAuth(format!(
-                "GitHub API error: {}",
-                error_body
-            )));
+            return Err(AppError::OAuth(format!("GitHub API error: {}", error_body)));
         }
 
         let user_info: GitHubUserInfo = response

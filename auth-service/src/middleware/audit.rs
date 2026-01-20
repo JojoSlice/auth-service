@@ -26,10 +26,7 @@ pub async fn audit_middleware(
     let path = request.uri().path().to_string();
     let client_ip = extract_client_ip(&request, &addr);
 
-    let request_id = request
-        .extensions()
-        .get::<RequestId>()
-        .map(|r| r.0.clone());
+    let request_id = request.extensions().get::<RequestId>().map(|r| r.0.clone());
 
     let user_id = request
         .extensions()

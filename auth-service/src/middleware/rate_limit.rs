@@ -55,10 +55,12 @@ impl RateLimiter {
         let now = Utc::now();
         let window_duration = Duration::minutes(1);
 
-        let mut entry = map.entry(key.to_string()).or_insert_with(|| RateLimitBucket {
-            count: 0,
-            window_start: now,
-        });
+        let mut entry = map
+            .entry(key.to_string())
+            .or_insert_with(|| RateLimitBucket {
+                count: 0,
+                window_start: now,
+            });
 
         if now - entry.window_start > window_duration {
             entry.count = 1;

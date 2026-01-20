@@ -53,11 +53,7 @@ pub struct OAuthProvider {
 }
 
 impl OAuthProvider {
-    pub fn new(
-        user_id: String,
-        provider_name: ProviderName,
-        provider_user_id: String,
-    ) -> Self {
+    pub fn new(user_id: String, provider_name: ProviderName, provider_user_id: String) -> Self {
         let now = Utc::now().to_rfc3339();
         Self {
             id: Uuid::new_v4().to_string(),

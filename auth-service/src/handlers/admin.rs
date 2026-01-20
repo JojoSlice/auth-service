@@ -2,7 +2,8 @@ use axum::{
     extract::{ConnectInfo, Path, State},
     http::StatusCode,
     middleware::Next,
-    response::{IntoResponse, Response}, Json,
+    response::{IntoResponse, Response},
+    Json,
 };
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
@@ -30,9 +31,10 @@ pub async fn admin_ip_check(
 ) -> Response {
     let client_ip = extract_client_ip(&request, &addr);
 
-    let is_allowed = state.admin_ip_whitelist.iter().any(|allowed| {
-        allowed == "*" || allowed == &client_ip || allowed.contains(&client_ip)
-    });
+    let is_allowed = state
+        .admin_ip_whitelist
+        .iter()
+        .any(|allowed| allowed == "*" || allowed == &client_ip || allowed.contains(&client_ip));
 
     if !is_allowed {
         tracing::warn!(
@@ -129,9 +131,7 @@ pub async fn revoke_api_key(
     })))
 }
 
-pub async fn get_audit_logs(
-    State(state): State<AdminHandlerState>,
-) -> Result<Json<Vec<AuditLog>>> {
+pub async fn get_audit_logs(State(state): State<AdminHandlerState>) -> Result<Json<Vec<AuditLog>>> {
     let logs = state.audit_log_repository.find_recent(100).await?;
     Ok(Json(logs))
 }

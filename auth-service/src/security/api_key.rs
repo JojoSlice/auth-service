@@ -5,7 +5,6 @@ use argon2::{
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD as BASE64_URL, Engine};
 use rand::RngCore;
 
-
 const API_KEY_LENGTH: usize = 32;
 const PREFIX_LENGTH: usize = 8;
 

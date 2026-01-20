@@ -18,7 +18,11 @@ pub struct User {
 }
 
 impl User {
-    pub fn new(email: String, display_name: Option<String>, profile_picture_url: Option<String>) -> Self {
+    pub fn new(
+        email: String,
+        display_name: Option<String>,
+        profile_picture_url: Option<String>,
+    ) -> Self {
         let now = Utc::now().to_rfc3339();
         Self {
             id: Uuid::new_v4().to_string(),

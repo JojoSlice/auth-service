@@ -40,7 +40,11 @@ pub async fn refresh_token(
 
     let token_pair = state
         .token_service
-        .refresh_token(&request.refresh_token, Some(&api_key.client_project), Some(&device_info))
+        .refresh_token(
+            &request.refresh_token,
+            Some(&api_key.client_project),
+            Some(&device_info),
+        )
         .await?;
 
     Ok(Json(token_pair))

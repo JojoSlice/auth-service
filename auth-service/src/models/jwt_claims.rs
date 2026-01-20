@@ -131,7 +131,10 @@ impl DeviceInfo {
                 std::net::IpAddr::V6(v6) => {
                     let segments = v6.segments();
                     // Return /48 subnet (first 3 segments)
-                    Some(format!("{:x}:{:x}:{:x}::/48", segments[0], segments[1], segments[2]))
+                    Some(format!(
+                        "{:x}:{:x}:{:x}::/48",
+                        segments[0], segments[1], segments[2]
+                    ))
                 }
             }
         } else {

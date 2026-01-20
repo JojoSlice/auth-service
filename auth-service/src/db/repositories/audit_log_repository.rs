@@ -83,11 +83,12 @@ impl AuditLogRepository {
     }
 
     pub async fn find_by_request_id(&self, request_id: &str) -> Result<Vec<AuditLog>> {
-        let logs =
-            sqlx::query_as::<_, AuditLog>("SELECT * FROM audit_logs WHERE request_id = ? ORDER BY timestamp")
-                .bind(request_id)
-                .fetch_all(&self.pool)
-                .await?;
+        let logs = sqlx::query_as::<_, AuditLog>(
+            "SELECT * FROM audit_logs WHERE request_id = ? ORDER BY timestamp",
+        )
+        .bind(request_id)
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(logs)
     }

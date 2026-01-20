@@ -16,7 +16,9 @@ pub async fn request_id_middleware(mut request: Request, next: Next) -> Response
         .map(String::from)
         .unwrap_or_else(|| Uuid::new_v4().to_string());
 
-    request.extensions_mut().insert(RequestId(request_id.clone()));
+    request
+        .extensions_mut()
+        .insert(RequestId(request_id.clone()));
 
     let mut response = next.run(request).await;
 

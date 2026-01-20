@@ -84,8 +84,12 @@ pub async fn oauth_init(
         .unwrap_or_default();
 
     let authorization_url = match provider_name {
-        ProviderName::Google => state.google_provider.authorization_url(&oauth_state, &scopes),
-        ProviderName::Github => state.github_provider.authorization_url(&oauth_state, &scopes),
+        ProviderName::Google => state
+            .google_provider
+            .authorization_url(&oauth_state, &scopes),
+        ProviderName::Github => state
+            .github_provider
+            .authorization_url(&oauth_state, &scopes),
     };
 
     tracing::info!(
@@ -173,23 +177,21 @@ pub async fn oauth_callback(
         }
     };
 
-    let (client_project, redirect_uri) = match state
-        .auth_service
-        .validate_and_consume_state(&query.state)
-    {
-        Ok((project, uri)) => (project, uri),
-        Err(e) => {
-            tracing::warn!(error = %e, "Invalid OAuth state");
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({
-                    "error": "invalid_state",
-                    "error_description": "Invalid or expired state parameter"
-                })),
-            )
-                .into_response();
-        }
-    };
+    let (client_project, redirect_uri) =
+        match state.auth_service.validate_and_consume_state(&query.state) {
+            Ok((project, uri)) => (project, uri),
+            Err(e) => {
+                tracing::warn!(error = %e, "Invalid OAuth state");
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": "invalid_state",
+                        "error_description": "Invalid or expired state parameter"
+                    })),
+                )
+                    .into_response();
+            }
+        };
 
     let oauth_provider: &dyn OAuthProvider = match provider_name {
         ProviderName::Google => state.google_provider.as_ref(),
@@ -198,7 +200,12 @@ pub async fn oauth_callback(
 
     let (user, token_pair) = match state
         .auth_service
-        .handle_oauth_callback(oauth_provider, &query.code, &client_project, Some(&device_info))
+        .handle_oauth_callback(
+            oauth_provider,
+            &query.code,
+            &client_project,
+            Some(&device_info),
+        )
         .await
     {
         Ok(result) => result,
@@ -219,20 +226,36 @@ pub async fn oauth_callback(
     };
 
     // Check for login anomalies
-    let anomaly = state.anomaly_detection_service.check_login_anomaly(&user.id, ip, user_agent);
+    let anomaly = state
+        .anomaly_detection_service
+        .check_login_anomaly(&user.id, ip, user_agent);
 
     // Record successful login
-    state.anomaly_detection_service.record_successful_login(&user.id, ip, user_agent);
+    state
+        .anomaly_detection_service
+        .record_successful_login(&user.id, ip, user_agent);
 
     // Log anomalies to audit log
     if anomaly.should_warn() {
         let anomaly_description = match &anomaly {
-            AnomalyResult::UnusualLocation { previous_ip, current_ip } => {
-                format!("Login from new IP: {} (previous: {})", current_ip, previous_ip)
+            AnomalyResult::UnusualLocation {
+                previous_ip,
+                current_ip,
+            } => {
+                format!(
+                    "Login from new IP: {} (previous: {})",
+                    current_ip, previous_ip
+                )
             }
-            AnomalyResult::ImpossibleTravel { previous_location, current_location, time_diff_minutes } => {
-                format!("Suspicious location change: {} -> {} in {} minutes",
-                    previous_location, current_location, time_diff_minutes)
+            AnomalyResult::ImpossibleTravel {
+                previous_location,
+                current_location,
+                time_diff_minutes,
+            } => {
+                format!(
+                    "Suspicious location change: {} -> {} in {} minutes",
+                    previous_location, current_location, time_diff_minutes
+                )
             }
             AnomalyResult::UnusualPattern { reason } => {
                 format!("Unusual pattern: {}", reason)

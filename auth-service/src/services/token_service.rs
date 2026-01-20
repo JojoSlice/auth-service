@@ -43,7 +43,8 @@ impl TokenService {
         }
 
         // Verify device binding if present in the token
-        if let (Some(token_device_hash), Some(current_device)) = (&claims.device_hash, device_info) {
+        if let (Some(token_device_hash), Some(current_device)) = (&claims.device_hash, device_info)
+        {
             let current_hash = current_device.compute_hash();
             if &current_hash != token_device_hash {
                 tracing::warn!(
@@ -202,9 +203,8 @@ impl TokenService {
             true
         });
 
-        self.revoked_families.retain(|family_id, _| {
-            self.refresh_token_families.contains_key(family_id)
-        });
+        self.revoked_families
+            .retain(|family_id, _| self.refresh_token_families.contains_key(family_id));
     }
 }
 

@@ -76,11 +76,7 @@ impl IntoResponse for AppError {
                     "Server configuration error",
                 )
             }
-            AppError::OAuth(msg) => (
-                StatusCode::BAD_REQUEST,
-                Some("OAUTH_ERROR"),
-                msg.as_str(),
-            ),
+            AppError::OAuth(msg) => (StatusCode::BAD_REQUEST, Some("OAUTH_ERROR"), msg.as_str()),
             AppError::JwtError(e) => {
                 tracing::error!("JWT error: {:?}", e);
                 (
@@ -104,21 +100,11 @@ impl IntoResponse for AppError {
                 Some("UNAUTHORIZED"),
                 "Authentication required",
             ),
-            AppError::Forbidden => (
-                StatusCode::FORBIDDEN,
-                Some("FORBIDDEN"),
-                "Access forbidden",
-            ),
-            AppError::NotFound(msg) => (
-                StatusCode::NOT_FOUND,
-                Some("NOT_FOUND"),
-                msg.as_str(),
-            ),
-            AppError::BadRequest(msg) => (
-                StatusCode::BAD_REQUEST,
-                Some("BAD_REQUEST"),
-                msg.as_str(),
-            ),
+            AppError::Forbidden => (StatusCode::FORBIDDEN, Some("FORBIDDEN"), "Access forbidden"),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, Some("NOT_FOUND"), msg.as_str()),
+            AppError::BadRequest(msg) => {
+                (StatusCode::BAD_REQUEST, Some("BAD_REQUEST"), msg.as_str())
+            }
             AppError::RateLimitExceeded => (
                 StatusCode::TOO_MANY_REQUESTS,
                 Some("RATE_LIMIT_EXCEEDED"),
@@ -145,7 +131,10 @@ impl IntoResponse for AppError {
         };
 
         let body = Json(ErrorResponse {
-            error: status.canonical_reason().unwrap_or("Unknown Error").to_string(),
+            error: status
+                .canonical_reason()
+                .unwrap_or("Unknown Error")
+                .to_string(),
             error_description: error_description.to_string(),
             error_code: error_code.map(String::from),
             request_id: None,

@@ -45,7 +45,7 @@ pub async fn security_headers_middleware(request: Request, next: Next) -> Respon
     headers.insert(
         "content-security-policy",
         HeaderValue::from_static(
-            "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+            "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
         ),
     );
 

@@ -171,41 +171,61 @@ impl AppConfig {
     pub fn load() -> Result<Self, ConfigError> {
         dotenvy::dotenv().ok();
 
-        let environment = std::env::var("ENVIRONMENT")
-            .unwrap_or_else(|_| "development".into());
+        let environment = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "development".into());
 
         let config = Config::builder()
             .add_source(File::with_name("config/default").required(false))
-            .add_source(
-                File::with_name(&format!("config/{}", environment))
-                    .required(false)
-            )
+            .add_source(File::with_name(&format!("config/{}", environment)).required(false))
             .add_source(
                 Environment::default()
                     .prefix("AUTH")
                     .separator("__")
-                    .try_parsing(true)
+                    .try_parsing(true),
             )
             .add_source(
                 Environment::default()
                     .separator("_")
                     .try_parsing(true)
-                    .list_separator(",")
+                    .list_separator(","),
             )
             .set_override("server.environment", environment)?
             .set_override_option("database.url", std::env::var("DATABASE_URL").ok())?
             .set_override_option("jwt.private_key", std::env::var("JWT_PRIVATE_KEY").ok())?
             .set_override_option("jwt.public_key", std::env::var("JWT_PUBLIC_KEY").ok())?
             .set_override_option("jwt.issuer", std::env::var("JWT_ISSUER").ok())?
-            .set_override_option("oauth.google.client_id", std::env::var("GOOGLE_CLIENT_ID").ok())?
-            .set_override_option("oauth.google.client_secret", std::env::var("GOOGLE_CLIENT_SECRET").ok())?
-            .set_override_option("oauth.google.redirect_uri", std::env::var("GOOGLE_REDIRECT_URI").ok())?
-            .set_override_option("oauth.github.client_id", std::env::var("GITHUB_CLIENT_ID").ok())?
-            .set_override_option("oauth.github.client_secret", std::env::var("GITHUB_CLIENT_SECRET").ok())?
-            .set_override_option("oauth.github.redirect_uri", std::env::var("GITHUB_REDIRECT_URI").ok())?
-            .set_override_option("security.encryption_key", std::env::var("ENCRYPTION_KEY").ok())?
+            .set_override_option(
+                "oauth.google.client_id",
+                std::env::var("GOOGLE_CLIENT_ID").ok(),
+            )?
+            .set_override_option(
+                "oauth.google.client_secret",
+                std::env::var("GOOGLE_CLIENT_SECRET").ok(),
+            )?
+            .set_override_option(
+                "oauth.google.redirect_uri",
+                std::env::var("GOOGLE_REDIRECT_URI").ok(),
+            )?
+            .set_override_option(
+                "oauth.github.client_id",
+                std::env::var("GITHUB_CLIENT_ID").ok(),
+            )?
+            .set_override_option(
+                "oauth.github.client_secret",
+                std::env::var("GITHUB_CLIENT_SECRET").ok(),
+            )?
+            .set_override_option(
+                "oauth.github.redirect_uri",
+                std::env::var("GITHUB_REDIRECT_URI").ok(),
+            )?
+            .set_override_option(
+                "security.encryption_key",
+                std::env::var("ENCRYPTION_KEY").ok(),
+            )?
             .set_override_option("security.api_key_salt", std::env::var("API_KEY_SALT").ok())?
-            .set_override_option("cors.default_allowed_origins", std::env::var("DEFAULT_ALLOWED_ORIGINS").ok())?
+            .set_override_option(
+                "cors.default_allowed_origins",
+                std::env::var("DEFAULT_ALLOWED_ORIGINS").ok(),
+            )?
             .build()?;
 
         config.try_deserialize()

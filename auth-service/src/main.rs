@@ -9,10 +9,7 @@ async fn main() -> Result<()> {
 
     init_logging(&config.logging.level, &config.logging.format);
 
-    tracing::info!(
-        "Starting Auth Service v{}",
-        env!("CARGO_PKG_VERSION")
-    );
+    tracing::info!("Starting Auth Service v{}", env!("CARGO_PKG_VERSION"));
     tracing::info!("Environment: {}", config.server.environment);
 
     tracing::info!("Connecting to database...");
@@ -26,7 +23,11 @@ async fn main() -> Result<()> {
     let app = create_router(state);
 
     let addr = SocketAddr::from((
-        config.server.host.parse::<std::net::IpAddr>().unwrap_or([0, 0, 0, 0].into()),
+        config
+            .server
+            .host
+            .parse::<std::net::IpAddr>()
+            .unwrap_or([0, 0, 0, 0].into()),
         config.server.port,
     ));
 
