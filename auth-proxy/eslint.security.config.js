@@ -1,6 +1,7 @@
 // ESLint security configuration for auth-proxy
 // Used by the security CI pipeline to enforce security best practices
 
+import globals from 'globals';
 import security from 'eslint-plugin-security';
 import tseslint from 'typescript-eslint';
 
@@ -14,6 +15,9 @@ export default [
       ecmaVersion: 2022,
       sourceType: 'module',
       parser: tseslint.parser,
+      globals: {
+        ...globals.node,
+      },
     },
     rules: {
       // ============================================
