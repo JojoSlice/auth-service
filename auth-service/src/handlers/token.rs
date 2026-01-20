@@ -1,10 +1,14 @@
-use axum::{extract::State, Extension, Json};
+use axum::{
+    extract::State,
+    http::{header, HeaderMap},
+    Extension, Json,
+};
 use std::sync::Arc;
 
 use crate::error::Result;
-use crate::middleware::AuthenticatedUser;
+use crate::middleware::{AuthenticatedUser, ClientIp};
 use crate::models::{
-    RefreshTokenRequest, RevokeTokenRequest, TokenPair, ValidateTokenRequest,
+    DeviceInfo, RefreshTokenRequest, RevokeTokenRequest, TokenPair, ValidateTokenRequest,
     ValidateTokenResponse, ValidatedApiKey,
 };
 use crate::services::TokenService;
@@ -17,11 +21,26 @@ pub struct TokenHandlerState {
 pub async fn refresh_token(
     State(state): State<TokenHandlerState>,
     Extension(api_key): Extension<ValidatedApiKey>,
+    Extension(client_ip): Extension<ClientIp>,
+    headers: HeaderMap,
     Json(request): Json<RefreshTokenRequest>,
 ) -> Result<Json<TokenPair>> {
+    // Extract device info for token binding verification
+    let device_info = DeviceInfo {
+        user_agent: headers
+            .get(header::USER_AGENT)
+            .and_then(|v| v.to_str().ok())
+            .map(String::from),
+        accept_language: headers
+            .get(header::ACCEPT_LANGUAGE)
+            .and_then(|v| v.to_str().ok())
+            .map(String::from),
+        ip_subnet: DeviceInfo::extract_subnet(&client_ip.0),
+    };
+
     let token_pair = state
         .token_service
-        .refresh_token(&request.refresh_token, Some(&api_key.client_project))
+        .refresh_token(&request.refresh_token, Some(&api_key.client_project), Some(&device_info))
         .await?;
 
     Ok(Json(token_pair))

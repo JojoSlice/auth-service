@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::db::UserRepository;
 use crate::error::{AppError, Result};
-use crate::models::{RefreshTokenFamily, TokenPair, ValidateTokenResponse};
+use crate::models::{DeviceInfo, RefreshTokenFamily, TokenPair, ValidateTokenResponse};
 use crate::security::JwtService;
 
 pub struct TokenService {
@@ -28,6 +28,7 @@ impl TokenService {
         &self,
         refresh_token: &str,
         client_project: Option<&str>,
+        device_info: Option<&DeviceInfo>,
     ) -> Result<TokenPair> {
         let claims = self.jwt_service.verify_refresh_token(refresh_token)?;
 
@@ -39,6 +40,22 @@ impl TokenService {
             );
             self.revoke_all_user_tokens(&claims.sub);
             return Err(AppError::InvalidToken);
+        }
+
+        // Verify device binding if present in the token
+        if let (Some(token_device_hash), Some(current_device)) = (&claims.device_hash, device_info) {
+            let current_hash = current_device.compute_hash();
+            if &current_hash != token_device_hash {
+                tracing::warn!(
+                    family_id = %claims.family_id,
+                    user_id = %claims.sub,
+                    "Device mismatch detected during token refresh - possible token theft"
+                );
+                // Revoke this token family but don't revoke all user tokens
+                // (user might have legitimately changed devices)
+                self.revoked_families.insert(claims.family_id.clone(), ());
+                return Err(AppError::DeviceMismatch);
+            }
         }
 
         if let Some(family) = self.refresh_token_families.get(&claims.family_id) {
@@ -77,6 +94,9 @@ impl TokenService {
 
         let new_generation = claims.generation + 1;
 
+        // Compute device hash for the new token
+        let device_hash = device_info.map(|d| d.compute_hash());
+
         let now = Utc::now().to_rfc3339();
         self.refresh_token_families.insert(
             claims.family_id.clone(),
@@ -96,12 +116,14 @@ impl TokenService {
             client_project,
             Some(&claims.family_id),
             new_generation,
+            device_hash.as_deref(),
         )?;
 
         tracing::info!(
             user_id = %user.id,
             family_id = %claims.family_id,
             generation = new_generation,
+            device_bound = device_hash.is_some(),
             "Refresh token rotated"
         );
 

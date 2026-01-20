@@ -1,22 +1,26 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Redirect, Response},
     Extension, Json,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
+use crate::db::AuditLogRepository;
 use crate::error::{AppError, Result};
-use crate::models::{ProviderName, ValidatedApiKey};
+use crate::middleware::ClientIp;
+use crate::models::{AuditEventType, AuditLogBuilder, DeviceInfo, ProviderName, ValidatedApiKey};
 use crate::oauth::{GitHubOAuthProvider, GoogleOAuthProvider, OAuthProvider};
-use crate::services::AuthService;
+use crate::services::{AnomalyDetectionService, AnomalyResult, AuthService};
 
 #[derive(Clone)]
 pub struct OAuthHandlerState {
     pub auth_service: Arc<AuthService>,
     pub google_provider: Arc<GoogleOAuthProvider>,
     pub github_provider: Arc<GitHubOAuthProvider>,
+    pub anomaly_detection_service: Arc<AnomalyDetectionService>,
+    pub audit_log_repository: Arc<AuditLogRepository>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -100,7 +104,43 @@ pub async fn oauth_callback(
     State(state): State<OAuthHandlerState>,
     Path(provider): Path<String>,
     Query(query): Query<OAuthCallbackQuery>,
+    headers: HeaderMap,
+    Extension(client_ip): Extension<ClientIp>,
 ) -> Response {
+    let ip = &client_ip.0;
+    let user_agent = headers
+        .get(header::USER_AGENT)
+        .and_then(|v| v.to_str().ok());
+
+    // Check if IP is locked out due to previous suspicious activity
+    if let Some(lockout) = state.anomaly_detection_service.check_ip_lockout(ip) {
+        if let AnomalyResult::BruteForceDetected { lockout_until, .. } = lockout {
+            tracing::warn!(
+                ip = %ip,
+                lockout_until = %lockout_until,
+                "OAuth callback blocked - IP is locked out"
+            );
+            return (
+                StatusCode::TOO_MANY_REQUESTS,
+                Json(serde_json::json!({
+                    "error": "too_many_requests",
+                    "error_description": "Too many failed attempts. Please try again later."
+                })),
+            )
+                .into_response();
+        }
+    }
+
+    // Extract device info for token binding
+    let device_info = DeviceInfo {
+        user_agent: user_agent.map(String::from),
+        accept_language: headers
+            .get(header::ACCEPT_LANGUAGE)
+            .and_then(|v| v.to_str().ok())
+            .map(String::from),
+        ip_subnet: DeviceInfo::extract_subnet(ip),
+    };
+
     if let Some(error) = query.error {
         let description = query.error_description.unwrap_or_default();
         tracing::warn!(
@@ -158,11 +198,14 @@ pub async fn oauth_callback(
 
     let (user, token_pair) = match state
         .auth_service
-        .handle_oauth_callback(oauth_provider, &query.code, &client_project)
+        .handle_oauth_callback(oauth_provider, &query.code, &client_project, Some(&device_info))
         .await
     {
         Ok(result) => result,
         Err(e) => {
+            // Record failed attempt for this IP
+            state.anomaly_detection_service.record_failed_attempt(ip);
+
             tracing::error!(error = %e, provider = %provider_name, "OAuth callback failed");
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -174,6 +217,46 @@ pub async fn oauth_callback(
                 .into_response();
         }
     };
+
+    // Check for login anomalies
+    let anomaly = state.anomaly_detection_service.check_login_anomaly(&user.id, ip, user_agent);
+
+    // Record successful login
+    state.anomaly_detection_service.record_successful_login(&user.id, ip, user_agent);
+
+    // Log anomalies to audit log
+    if anomaly.should_warn() {
+        let anomaly_description = match &anomaly {
+            AnomalyResult::UnusualLocation { previous_ip, current_ip } => {
+                format!("Login from new IP: {} (previous: {})", current_ip, previous_ip)
+            }
+            AnomalyResult::ImpossibleTravel { previous_location, current_location, time_diff_minutes } => {
+                format!("Suspicious location change: {} -> {} in {} minutes",
+                    previous_location, current_location, time_diff_minutes)
+            }
+            AnomalyResult::UnusualPattern { reason } => {
+                format!("Unusual pattern: {}", reason)
+            }
+            _ => "Unknown anomaly".to_string(),
+        };
+
+        let audit_log = AuditLogBuilder::new(AuditEventType::LoginAnomaly)
+            .user_id(&user.id)
+            .ip_address(ip)
+            .details(&anomaly_description)
+            .build();
+
+        if let Err(e) = state.audit_log_repository.create(&audit_log).await {
+            tracing::error!(error = %e, "Failed to log anomaly to audit log");
+        }
+
+        tracing::warn!(
+            user_id = %user.id,
+            ip = %ip,
+            anomaly = %anomaly_description,
+            "Login anomaly detected"
+        );
+    }
 
     if let Some(redirect_uri) = redirect_uri {
         let redirect_url = format!(

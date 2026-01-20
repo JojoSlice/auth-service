@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::db::{OAuthProviderRepository, UserRepository};
 use crate::error::{AppError, Result};
-use crate::models::{CreateUserFromOAuth, OAuthProvider, TokenPair, User};
+use crate::models::{CreateUserFromOAuth, DeviceInfo, OAuthProvider, TokenPair, User};
 use crate::oauth::{OAuthProvider as OAuthProviderTrait, OAuthStateManager, OAuthUserInfo};
 use crate::security::{EncryptionService, JwtService};
 
@@ -46,6 +46,7 @@ impl AuthService {
         provider: &dyn OAuthProviderTrait,
         code: &str,
         client_project: &str,
+        device_info: Option<&DeviceInfo>,
     ) -> Result<(User, TokenPair)> {
         let tokens = provider.exchange_code(code).await?;
 
@@ -58,17 +59,22 @@ impl AuthService {
 
         self.user_repository.update_last_login(&user.id).await?;
 
+        // Compute device hash for token binding
+        let device_hash = device_info.map(|d| d.compute_hash());
+
         let token_pair = self.jwt_service.create_token_pair(
             &user.id,
             &user.email,
             Some(client_project),
             None,
             0,
+            device_hash.as_deref(),
         )?;
 
         tracing::info!(
             user_id = %user.id,
             provider = %user_info.provider,
+            device_bound = device_hash.is_some(),
             "User authenticated via OAuth"
         );
 

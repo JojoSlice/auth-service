@@ -10,7 +10,7 @@ use crate::app_state::AppState;
 use crate::handlers;
 use crate::middleware::{
     api_key_middleware, audit_middleware, auth_middleware, create_cors_layer, ip_filter_middleware,
-    rate_limit_middleware, request_id_middleware,
+    rate_limit_middleware, request_id_middleware, security_headers_middleware,
 };
 
 pub fn create_router(state: AppState) -> Router {
@@ -109,6 +109,7 @@ pub fn create_router(state: AppState) -> Router {
         .layer(
             ServiceBuilder::new()
                 .layer(TraceLayer::new_for_http())
+                .layer(middleware::from_fn(security_headers_middleware))
                 .layer(cors)
                 .layer(middleware::from_fn(request_id_middleware))
                 .layer(middleware::from_fn_with_state(

@@ -1,84 +1,94 @@
 # TODO: Säkerhetsförbättringar
 
-## Backend Proxy (Hög prioritet)
+## Implementerat
 
-Nuvarande implementation exponerar API-nyckeln i klientkoden. En backend-proxy löser detta och möjliggör säkrare token-hantering.
+### Backend Proxy + HttpOnly Cookies ✅
 
-### Vad som behövs
+Implementerat i `auth-proxy/`:
+- Node.js/Express proxy-server som döljer API-nycklar från frontend
+- HttpOnly cookies för access_token och refresh_token
+- Automatisk cookie-hantering vid OAuth callback
+- Frontend uppdaterad för cookie-baserad auth
 
-1. **Skapa en proxy-server** (Node.js/Express, eller liknande)
-   ```
-   /api/auth/google     → POST → auth-service /api/v1/auth/oauth/google/init
-   /api/auth/callback   → GET  → auth-service /api/v1/auth/oauth/{provider}/callback
-   /api/auth/refresh    → POST → auth-service /api/v1/auth/token/refresh
-   /api/auth/logout     → POST → auth-service /api/v1/auth/token/revoke
-   /api/user/profile    → GET  → auth-service /api/v1/user/profile
-   ```
-
-2. **Flytta API-nyckeln till backend**
-   - Lagra `AUTH_API_KEY` som miljövariabel på servern
-   - Ta bort `VITE_AUTH_API_KEY` från frontend
-
-3. **Använd HttpOnly cookies**
-   - Backend sätter tokens i HttpOnly cookies vid inloggning
-   - Frontend behöver inte hantera tokens direkt
-   - Cookies skickas automatiskt med varje request
-
-### Exempel på proxy-endpoint
-
-```typescript
-// /api/auth/google
-app.post('/api/auth/google', async (req, res) => {
-  const response = await fetch(`${AUTH_SERVICE_URL}/api/v1/auth/oauth/google/init`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.AUTH_API_KEY,
-    },
-  });
-
-  const data = await response.json();
-  res.json(data);
-});
-
-// /api/auth/callback
-app.get('/api/auth/callback', async (req, res) => {
-  const { code, state, provider } = req.query;
-
-  const response = await fetch(
-    `${AUTH_SERVICE_URL}/api/v1/auth/oauth/${provider}/callback?code=${code}&state=${state}`,
-    { headers: { 'x-api-key': process.env.AUTH_API_KEY } }
-  );
-
-  const data = await response.json();
-
-  // Sätt HttpOnly cookies
-  res.cookie('access_token', data.access_token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-    maxAge: data.expires_in * 1000,
-  });
-
-  res.cookie('refresh_token', data.refresh_token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'strict',
-    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 dagar
-  });
-
-  res.json({ user: data.user });
-});
+Endpoints:
+```
+POST /api/auth/:provider/init   → OAuth flow start
+GET  /api/auth/:provider/callback → OAuth callback + set cookies
+POST /api/auth/refresh          → Token refresh via cookies
+POST /api/auth/logout           → Logout + clear cookies
+GET  /api/user/profile          → Get profile via cookies
+GET  /api/auth/status           → Check auth status
 ```
 
-### Uppdatera frontend
+### Secure Headers Bundle ✅
 
-Efter proxy är implementerad:
+Implementerat i `auth-service/src/middleware/security_headers.rs`:
+- `X-Content-Type-Options: nosniff` - Förhindrar MIME type sniffing
+- `X-Frame-Options: DENY` - Skyddar mot clickjacking
+- `Referrer-Policy: strict-origin-when-cross-origin` - Kontrollerar referrer-information
+- `Permissions-Policy` - Inaktiverar onödiga webbläsarfunktioner
+- `X-XSS-Protection: 1; mode=block` - Legacy XSS-skydd
+- `Cache-Control: no-store, no-cache` - Förhindrar caching av API-svar
+- `Pragma: no-cache` - Legacy cache-kontroll
 
-1. Ta bort `VITE_AUTH_API_KEY` från config
-2. Ändra API-url:er till proxy-endpoints
-3. Ta bort token-lagring i sessionStorage
-4. Uppdatera AuthProvider att hantera cookie-baserad auth
+### Inaktivitetslås ✅
+
+Implementerat i `auth-web/src/auth/AuthProvider.tsx`:
+- Automatisk utloggning efter 15 minuters inaktivitet
+- Spårar användaraktivitet via mousedown, keydown, scroll, touchstart, mousemove
+- Kontrollerar inaktivitet var 60:e sekund
+- Endast aktiv när användaren är inloggad
+
+### Rate limiting frontend ✅
+
+Implementerat i `auth-web/src/components/Login.tsx`:
+- 2 sekunders cooldown mellan login-försök
+- Förhindrar spam av login-knappar
+- Knapparna inaktiveras under cooldown-perioden
+
+### CSP via HTTP-headers ✅
+
+Implementerat i både `auth-service` och `auth-proxy`:
+- Strikt Content-Security-Policy för API-svar
+- `default-src 'none'` - blockerar allt som standard
+- `frame-ancestors 'none'` - förhindrar embedding
+- `base-uri 'none'` - förhindrar base tag injection
+- `form-action 'none'` - förhindrar form submissions
+
+### Token Binding / Device Fingerprinting ✅
+
+Implementerat i `auth-service`:
+- Refresh tokens binds till enhet via `device_hash` claim
+- Hash beräknas från User-Agent, Accept-Language, och IP-subnet
+- Vid token refresh verifieras att device matchar
+- Vid mismatch revokeras token-familjen och ny inloggning krävs
+- Skyddar mot token-stöld genom att binda tokens till ursprungsenheten
+
+### JWT Secret Rotation ✅
+
+Implementerat i `auth-service`:
+- Stöd för `previous_public_key` i konfiguration
+- Nya tokens signeras med current key (inkl. `kid` header)
+- Validering sker mot current key först, sedan previous key
+- Möjliggör sömlös nyckelrotation utan downtime
+- Konfigurera via `jwt.previous_public_key` och `jwt.key_id`
+
+### Suspicious Activity Detection ✅
+
+Implementerat i `auth-service/src/services/anomaly_detection.rs`:
+- **Brute force detection**: IP-baserad spårning av misslyckade inloggningsförsök
+  - Max 5 misslyckade försök inom 30 minuter
+  - 15 minuters lockout vid överträdelse
+  - Automatisk rensning efter lyckad inloggning
+- **Geografisk anomali**: Detekterar inloggning från ny IP-adress
+  - Jämför mot kända IP-adresser per användare
+  - Loggar varning vid ny location
+- **Impossible travel**: Detekterar misstänkta platsbyten
+  - Varnar vid inloggning från olika subnät inom 60 minuter
+  - Baserat på IP-subnet jämförelse
+- **Integration med OAuth callback**: Kontrollerar anomalier vid varje inloggning
+- **Audit logging**: Loggar alla anomalier till audit_logs-tabellen
+- **AuditEventType**: Nya typer `LoginAnomaly` och `BruteForceDetected`
 
 ---
 
@@ -272,18 +282,18 @@ sqlx = { version = "0.7", features = ["sqlite", "sqlcipher"] }
 
 ## Prioriteringsordning
 
-| Prioritet | Åtgärd | Komplexitet |
-|-----------|--------|-------------|
-| 🔴 Hög | Backend Proxy + HttpOnly cookies | Medel |
-| 🔴 Hög | HTTPS + HSTS | Låg |
-| 🔴 Hög | Refresh Token Reuse Detection | Låg |
-| 🟡 Medel | CSP via HTTP-headers | Låg |
-| 🟡 Medel | Secure Headers Bundle | Låg |
-| 🟡 Medel | JWT Secret Rotation | Medel |
-| 🟡 Medel | Token Binding | Medel |
-| 🟡 Medel | Inaktivitetslås | Låg |
-| 🟡 Medel | Suspicious Activity Detection | Hög |
-| 🟢 Låg | Rate limiting frontend | Låg |
-| 🟢 Låg | SRI | Låg |
-| 🟢 Låg | Request Signing | Medel |
-| 🟢 Låg | Database Encryption | Medel |
+| Prioritet | Åtgärd | Komplexitet | Status |
+|-----------|--------|-------------|--------|
+| 🔴 Hög | Backend Proxy + HttpOnly cookies | Medel | ✅ Klar |
+| 🔴 Hög | HTTPS + HSTS | Låg | (Produktionskonfiguration) |
+| 🔴 Hög | Refresh Token Reuse Detection | Låg | ✅ Klar (se token_service.rs) |
+| 🟡 Medel | CSP via HTTP-headers | Låg | ✅ Klar |
+| 🟡 Medel | Secure Headers Bundle | Låg | ✅ Klar |
+| 🟡 Medel | JWT Secret Rotation | Medel | ✅ Klar |
+| 🟡 Medel | Token Binding | Medel | ✅ Klar |
+| 🟡 Medel | Inaktivitetslås | Låg | ✅ Klar |
+| 🟡 Medel | Suspicious Activity Detection | Hög | ✅ Klar |
+| 🟢 Låg | Rate limiting frontend | Låg | ✅ Klar |
+| 🟢 Låg | SRI | Låg | |
+| 🟢 Låg | Request Signing | Medel | |
+| 🟢 Låg | Database Encryption | Medel | |

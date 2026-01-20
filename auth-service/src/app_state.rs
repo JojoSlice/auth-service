@@ -10,7 +10,7 @@ use crate::handlers::{AdminHandlerState, OAuthHandlerState, TokenHandlerState, U
 use crate::middleware::{ApiKeyState, AuditState, AuthState, IpFilterState, RateLimiter};
 use crate::oauth::{GitHubOAuthProvider, GoogleOAuthProvider, OAuthStateManager};
 use crate::security::{ApiKeyService, EncryptionService, JwtService};
-use crate::services::{AuthService, TokenService, UserService};
+use crate::services::{AnomalyConfig, AnomalyDetectionService, AuthService, TokenService, UserService};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -34,6 +34,7 @@ pub struct AppState {
     pub auth_service: Arc<AuthService>,
     pub user_service: Arc<UserService>,
     pub token_service: Arc<TokenService>,
+    pub anomaly_detection_service: Arc<AnomalyDetectionService>,
 
     pub rate_limiter: RateLimiter,
 }
@@ -74,6 +75,8 @@ impl AppState {
             Arc::clone(&user_repository),
         ));
 
+        let anomaly_detection_service = Arc::new(AnomalyDetectionService::new(AnomalyConfig::default()));
+
         let rate_limiter = RateLimiter::new(config.rate_limit.clone());
 
         Ok(Self {
@@ -93,6 +96,7 @@ impl AppState {
             auth_service,
             user_service,
             token_service,
+            anomaly_detection_service,
             rate_limiter,
         })
     }
@@ -127,6 +131,8 @@ impl AppState {
             auth_service: Arc::clone(&self.auth_service),
             google_provider: Arc::clone(&self.google_provider),
             github_provider: Arc::clone(&self.github_provider),
+            anomaly_detection_service: Arc::clone(&self.anomaly_detection_service),
+            audit_log_repository: Arc::clone(&self.audit_log_repository),
         }
     }
 

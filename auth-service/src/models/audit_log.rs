@@ -28,6 +28,8 @@ pub enum AuditEventType {
     IpWhitelisted,
     UnauthorizedAccess,
     AdminAction,
+    LoginAnomaly,
+    BruteForceDetected,
 }
 
 impl AuditEventType {
@@ -55,6 +57,8 @@ impl AuditEventType {
             AuditEventType::IpWhitelisted => "IP_WHITELISTED",
             AuditEventType::UnauthorizedAccess => "UNAUTHORIZED_ACCESS",
             AuditEventType::AdminAction => "ADMIN_ACTION",
+            AuditEventType::LoginAnomaly => "LOGIN_ANOMALY",
+            AuditEventType::BruteForceDetected => "BRUTE_FORCE_DETECTED",
         }
     }
 }
@@ -143,34 +147,44 @@ pub struct AuditLogBuilder {
 }
 
 impl AuditLogBuilder {
-    pub fn new(event_type: AuditEventType, ip_address: String) -> Self {
+    pub fn new(event_type: AuditEventType) -> Self {
         Self {
-            log: AuditLog::new(event_type, ip_address),
+            log: AuditLog::new(event_type, String::new()),
         }
     }
 
-    pub fn user_id(mut self, user_id: String) -> Self {
-        self.log.user_id = Some(user_id);
+    pub fn user_id(mut self, user_id: &str) -> Self {
+        self.log.user_id = Some(user_id.to_string());
         self
     }
 
-    pub fn request_id(mut self, request_id: String) -> Self {
-        self.log.request_id = Some(request_id);
+    pub fn ip_address(mut self, ip: &str) -> Self {
+        self.log.ip_address = ip.to_string();
         self
     }
 
-    pub fn endpoint(mut self, endpoint: String) -> Self {
-        self.log.endpoint = Some(endpoint);
+    pub fn details(mut self, details: &str) -> Self {
+        self.log.metadata = Some(serde_json::json!({ "details": details }).to_string());
         self
     }
 
-    pub fn http_method(mut self, method: String) -> Self {
-        self.log.http_method = Some(method);
+    pub fn request_id(mut self, request_id: &str) -> Self {
+        self.log.request_id = Some(request_id.to_string());
         self
     }
 
-    pub fn user_agent(mut self, user_agent: String) -> Self {
-        self.log.user_agent = Some(user_agent);
+    pub fn endpoint(mut self, endpoint: &str) -> Self {
+        self.log.endpoint = Some(endpoint.to_string());
+        self
+    }
+
+    pub fn http_method(mut self, method: &str) -> Self {
+        self.log.http_method = Some(method.to_string());
+        self
+    }
+
+    pub fn user_agent(mut self, user_agent: &str) -> Self {
+        self.log.user_agent = Some(user_agent.to_string());
         self
     }
 
@@ -179,8 +193,8 @@ impl AuditLogBuilder {
         self
     }
 
-    pub fn error(mut self, error: String) -> Self {
-        self.log.error_message = Some(error);
+    pub fn error(mut self, error: &str) -> Self {
+        self.log.error_message = Some(error.to_string());
         self
     }
 

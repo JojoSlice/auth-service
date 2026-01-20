@@ -21,6 +21,7 @@ pub enum AppError {
     RateLimitExceeded,
     InternalServerError(String),
     ValidationError(String),
+    DeviceMismatch,
 }
 
 #[derive(Serialize)]
@@ -49,6 +50,7 @@ impl fmt::Display for AppError {
             AppError::RateLimitExceeded => write!(f, "Rate limit exceeded"),
             AppError::InternalServerError(msg) => write!(f, "Internal server error: {}", msg),
             AppError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
+            AppError::DeviceMismatch => write!(f, "Device mismatch detected"),
         }
     }
 }
@@ -134,6 +136,11 @@ impl IntoResponse for AppError {
                 StatusCode::BAD_REQUEST,
                 Some("VALIDATION_ERROR"),
                 msg.as_str(),
+            ),
+            AppError::DeviceMismatch => (
+                StatusCode::UNAUTHORIZED,
+                Some("DEVICE_MISMATCH"),
+                "Session is bound to a different device. Please log in again.",
             ),
         };
 

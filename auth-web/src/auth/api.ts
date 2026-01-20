@@ -1,4 +1,17 @@
-import type { AuthConfig, AuthResponse, AuthTokens, OAuthProvider, User } from './types';
+import type { AuthConfig, OAuthProvider, User } from './types';
+
+interface OAuthCallbackResponse {
+  user: User;
+  expires_in: number;
+}
+
+interface RefreshResponse {
+  expires_in: number;
+}
+
+interface AuthStatusResponse {
+  authenticated: boolean;
+}
 
 export class AuthApi {
   private config: AuthConfig;
@@ -14,13 +27,13 @@ export class AuthApi {
     const url = `${this.config.apiUrl}${endpoint}`;
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-      'x-api-key': this.config.apiKey,
       ...options.headers,
     };
 
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include', // Send cookies with requests
     });
 
     if (!response.ok) {
@@ -32,9 +45,8 @@ export class AuthApi {
   }
 
   async initOAuth(provider: OAuthProvider): Promise<{ authorization_url: string; state: string }> {
-    return this.request(`/api/v1/auth/oauth/${provider}/init`, {
+    return this.request(`/api/auth/${provider}/init`, {
       method: 'POST',
-      body: JSON.stringify({}),
     });
   }
 
@@ -42,43 +54,28 @@ export class AuthApi {
     provider: OAuthProvider,
     code: string,
     state: string
-  ): Promise<AuthResponse> {
+  ): Promise<OAuthCallbackResponse> {
     const params = new URLSearchParams({ code, state });
-    return this.request(`/api/v1/auth/oauth/${provider}/callback?${params}`);
+    return this.request(`/api/auth/${provider}/callback?${params}`);
   }
 
-  async refreshToken(refreshToken: string): Promise<AuthTokens> {
-    return this.request('/api/v1/auth/token/refresh', {
+  async refreshToken(): Promise<RefreshResponse> {
+    return this.request('/api/auth/refresh', {
       method: 'POST',
-      body: JSON.stringify({ refresh_token: refreshToken }),
     });
   }
 
-  async validateToken(token: string): Promise<{ valid: boolean; user_id: string; email: string; expires_at: number }> {
-    return this.request('/api/v1/auth/token/validate', {
+  async logout(): Promise<void> {
+    await this.request('/api/auth/logout', {
       method: 'POST',
-      body: JSON.stringify({ token }),
     });
   }
 
-  async revokeToken(accessToken: string, refreshToken?: string, revokeAll = false): Promise<void> {
-    await this.request('/api/v1/auth/token/revoke', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        refresh_token: refreshToken,
-        revoke_all: revokeAll,
-      }),
-    });
+  async getProfile(): Promise<User> {
+    return this.request('/api/user/profile');
   }
 
-  async getProfile(accessToken: string): Promise<User> {
-    return this.request('/api/v1/user/profile', {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+  async getAuthStatus(): Promise<AuthStatusResponse> {
+    return this.request('/api/auth/status');
   }
 }

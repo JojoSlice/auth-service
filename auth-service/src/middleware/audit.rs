@@ -49,20 +49,21 @@ pub async fn audit_middleware(
     let event_type = determine_event_type(&path, &method, status_code);
 
     if let Some(event_type) = event_type {
-        let mut builder = AuditLogBuilder::new(event_type, client_ip)
-            .endpoint(path)
-            .http_method(method)
+        let mut builder = AuditLogBuilder::new(event_type)
+            .ip_address(&client_ip)
+            .endpoint(&path)
+            .http_method(&method)
             .status_code(status_code);
 
-        if let Some(req_id) = request_id {
+        if let Some(ref req_id) = request_id {
             builder = builder.request_id(req_id);
         }
 
-        if let Some(uid) = user_id {
+        if let Some(ref uid) = user_id {
             builder = builder.user_id(uid);
         }
 
-        if let Some(ua) = user_agent {
+        if let Some(ref ua) = user_agent {
             builder = builder.user_agent(ua);
         }
 

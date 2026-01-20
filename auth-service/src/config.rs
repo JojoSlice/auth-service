@@ -55,11 +55,21 @@ fn default_connection_timeout() -> u64 {
 pub struct JwtConfig {
     pub private_key: Secret<String>,
     pub public_key: String,
+    /// Previous public key for key rotation - allows validation during transition period
+    #[serde(default)]
+    pub previous_public_key: Option<String>,
+    /// Key ID for the current key (used in JWKS)
+    #[serde(default = "default_key_id")]
+    pub key_id: String,
     #[serde(default = "default_access_token_expiration")]
     pub access_token_expiration_minutes: i64,
     #[serde(default = "default_refresh_token_expiration")]
     pub refresh_token_expiration_days: i64,
     pub issuer: String,
+}
+
+fn default_key_id() -> String {
+    "key-1".to_string()
 }
 
 fn default_access_token_expiration() -> i64 {

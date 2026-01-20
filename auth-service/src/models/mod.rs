@@ -9,7 +9,7 @@ pub use api_key::{ApiKey, ApiKeyResponse, ValidatedApiKey};
 pub use audit_log::{AuditEventType, AuditLog, AuditLogBuilder};
 pub use ip_filter::{FilterType, IpFilter};
 pub use jwt_claims::{
-    AccessTokenClaims, RefreshTokenClaims, RefreshTokenFamily, RefreshTokenRequest,
+    AccessTokenClaims, DeviceInfo, RefreshTokenClaims, RefreshTokenFamily, RefreshTokenRequest,
     RevokeTokenRequest, TokenPair, ValidateTokenRequest, ValidateTokenResponse,
 };
 pub use oauth_provider::{

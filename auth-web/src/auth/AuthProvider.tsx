@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AuthContext } from './AuthContext';
 import { AuthApi } from './api';
 import type { AuthConfig, AuthState, OAuthProvider, User } from './types';
 
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'auth_access_token',
-  REFRESH_TOKEN: 'auth_refresh_token',
   USER: 'auth_user',
 } as const;
+
+const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
+const ACTIVITY_CHECK_INTERVAL = 60 * 1000; // Check every minute
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -23,24 +24,18 @@ export function AuthProvider({ children, config }: AuthProviderProps) {
   });
 
   const api = useMemo(() => new AuthApi(config), [config]);
+  const lastActivityRef = useRef<number>(Date.now());
 
-  const getStoredTokens = useCallback(() => {
-    const accessToken = sessionStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-    const refreshToken = sessionStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+  const getStoredUser = useCallback((): User | null => {
     const userJson = sessionStorage.getItem(STORAGE_KEYS.USER);
-    const user = userJson ? JSON.parse(userJson) as User : null;
-    return { accessToken, refreshToken, user };
+    return userJson ? JSON.parse(userJson) as User : null;
   }, []);
 
-  const storeTokens = useCallback((accessToken: string, refreshToken: string, user: User) => {
-    sessionStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-    sessionStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+  const storeUser = useCallback((user: User) => {
     sessionStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
   }, []);
 
-  const clearTokens = useCallback(() => {
-    sessionStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-    sessionStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+  const clearUser = useCallback(() => {
     sessionStorage.removeItem(STORAGE_KEYS.USER);
   }, []);
 
@@ -64,34 +59,25 @@ export function AuthProvider({ children, config }: AuthProviderProps) {
   const loginWithGithub = useCallback(() => initOAuthFlow('github'), [initOAuthFlow]);
 
   const logout = useCallback(async () => {
-    const { accessToken, refreshToken } = getStoredTokens();
-    if (accessToken) {
-      try {
-        await api.revokeToken(accessToken, refreshToken || undefined, true);
-      } catch {
-        // Ignore errors during logout
-      }
+    try {
+      await api.logout();
+    } catch {
+      // Ignore errors during logout - cookies are cleared by proxy anyway
     }
-    clearTokens();
+    clearUser();
     setState({
       user: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
     });
-  }, [api, clearTokens, getStoredTokens]);
+  }, [api, clearUser]);
 
   const refreshToken = useCallback(async () => {
-    const { refreshToken: storedRefreshToken } = getStoredTokens();
-    if (!storedRefreshToken) {
-      throw new Error('No refresh token available');
-    }
-
     try {
-      const tokens = await api.refreshToken(storedRefreshToken);
-      const user = await api.getProfile(tokens.access_token);
-
-      storeTokens(tokens.access_token, tokens.refresh_token, user);
+      await api.refreshToken();
+      const user = await api.getProfile();
+      storeUser(user);
       setState(s => ({
         ...s,
         user,
@@ -99,7 +85,7 @@ export function AuthProvider({ children, config }: AuthProviderProps) {
         error: null,
       }));
     } catch (error) {
-      clearTokens();
+      clearUser();
       setState({
         user: null,
         isAuthenticated: false,
@@ -108,9 +94,9 @@ export function AuthProvider({ children, config }: AuthProviderProps) {
       });
       throw error;
     }
-  }, [api, clearTokens, getStoredTokens, storeTokens]);
+  }, [api, clearUser, storeUser]);
 
-  // Handle OAuth callback
+  // Handle OAuth callback and check auth status on mount
   useEffect(() => {
     const handleCallback = async () => {
       const params = new URLSearchParams(window.location.search);
@@ -134,7 +120,7 @@ export function AuthProvider({ children, config }: AuthProviderProps) {
 
         try {
           const response = await api.handleOAuthCallback(provider, code, state);
-          storeTokens(response.access_token, response.refresh_token, response.user);
+          storeUser(response.user);
           setState({
             user: response.user,
             isAuthenticated: true,
@@ -154,47 +140,105 @@ export function AuthProvider({ children, config }: AuthProviderProps) {
         return;
       }
 
-      // Check for existing session
-      const { accessToken, refreshToken: storedRefresh, user } = getStoredTokens();
-      if (accessToken && user) {
-        try {
-          const validation = await api.validateToken(accessToken);
-          if (validation.valid) {
+      // Check auth status via cookies
+      try {
+        const { authenticated } = await api.getAuthStatus();
+        if (authenticated) {
+          // We have valid cookies, fetch user profile
+          const storedUser = getStoredUser();
+          if (storedUser) {
+            // Use cached user while we fetch fresh data
+            setState({
+              user: storedUser,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null,
+            });
+          }
+
+          try {
+            const user = await api.getProfile();
+            storeUser(user);
             setState({
               user,
               isAuthenticated: true,
               isLoading: false,
               error: null,
             });
-            return;
-          }
-        } catch {
-          // Token invalid, try refresh
-        }
-
-        if (storedRefresh) {
-          try {
-            const tokens = await api.refreshToken(storedRefresh);
-            const freshUser = await api.getProfile(tokens.access_token);
-            storeTokens(tokens.access_token, tokens.refresh_token, freshUser);
-            setState({
-              user: freshUser,
-              isAuthenticated: true,
-              isLoading: false,
-              error: null,
-            });
-            return;
           } catch {
-            clearTokens();
+            // Profile fetch failed, try to refresh
+            try {
+              await api.refreshToken();
+              const user = await api.getProfile();
+              storeUser(user);
+              setState({
+                user,
+                isAuthenticated: true,
+                isLoading: false,
+                error: null,
+              });
+            } catch {
+              // Refresh failed, user is logged out
+              clearUser();
+              setState({
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+                error: null,
+              });
+            }
           }
+        } else {
+          // No valid session
+          clearUser();
+          setState(s => ({ ...s, isLoading: false }));
         }
+      } catch {
+        // Auth status check failed, assume not authenticated
+        clearUser();
+        setState(s => ({ ...s, isLoading: false }));
       }
-
-      setState(s => ({ ...s, isLoading: false }));
     };
 
     handleCallback();
-  }, [api, clearTokens, getStoredTokens, storeTokens]);
+  }, [api, clearUser, getStoredUser, storeUser]);
+
+  // Inactivity timeout - auto logout after 15 minutes of inactivity
+  useEffect(() => {
+    if (!state.isAuthenticated) {
+      return;
+    }
+
+    const updateActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    const checkInactivity = () => {
+      const timeSinceLastActivity = Date.now() - lastActivityRef.current;
+      if (timeSinceLastActivity >= INACTIVITY_TIMEOUT) {
+        logout();
+      }
+    };
+
+    // Track user activity
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'];
+    activityEvents.forEach(event => {
+      window.addEventListener(event, updateActivity, { passive: true });
+    });
+
+    // Check for inactivity periodically
+    const intervalId = setInterval(checkInactivity, ACTIVITY_CHECK_INTERVAL);
+
+    // Reset activity on mount
+    updateActivity();
+
+    return () => {
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, updateActivity);
+      });
+      clearInterval(intervalId);
+    };
+  }, [state.isAuthenticated, logout]);
 
   const value = useMemo(() => ({
     ...state,

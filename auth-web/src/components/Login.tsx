@@ -1,9 +1,35 @@
+import { useState, useCallback } from 'react';
 import { useAuth } from '../auth';
-import { isConfigValid } from '../config';
 import './Login.css';
+
+const LOGIN_COOLDOWN_MS = 2000; // 2 seconds between login attempts
 
 export function Login() {
   const { loginWithGoogle, loginWithGithub, isLoading, error } = useAuth();
+  const [isRateLimited, setIsRateLimited] = useState(false);
+
+  const handleLogin = useCallback(async (loginFn: () => Promise<void>) => {
+    if (isRateLimited || isLoading) return;
+
+    setIsRateLimited(true);
+
+    try {
+      await loginFn();
+    } finally {
+      // Re-enable after cooldown (in case of error or if page doesn't redirect)
+      setTimeout(() => setIsRateLimited(false), LOGIN_COOLDOWN_MS);
+    }
+  }, [isRateLimited, isLoading]);
+
+  const handleGoogleLogin = useCallback(() => {
+    handleLogin(loginWithGoogle);
+  }, [handleLogin, loginWithGoogle]);
+
+  const handleGithubLogin = useCallback(() => {
+    handleLogin(loginWithGithub);
+  }, [handleLogin, loginWithGithub]);
+
+  const isDisabled = isLoading || isRateLimited;
 
   return (
     <div className="login-container">
@@ -11,19 +37,13 @@ export function Login() {
         <h2 className="login-title">Sign In</h2>
         <p className="login-subtitle">Choose your preferred method</p>
 
-        {!isConfigValid && (
-          <div className="login-warning">
-            API key not configured. See .env.example for setup.
-          </div>
-        )}
-
         {error && <div className="login-error">{error}</div>}
 
         <div className="login-buttons">
           <button
             className="login-btn login-btn-google"
-            onClick={loginWithGoogle}
-            disabled={isLoading}
+            onClick={handleGoogleLogin}
+            disabled={isDisabled}
           >
             <svg viewBox="0 0 24 24" className="login-icon">
               <path
@@ -48,8 +68,8 @@ export function Login() {
 
           <button
             className="login-btn login-btn-github"
-            onClick={loginWithGithub}
-            disabled={isLoading}
+            onClick={handleGithubLogin}
+            disabled={isDisabled}
           >
             <svg viewBox="0 0 24 24" className="login-icon">
               <path

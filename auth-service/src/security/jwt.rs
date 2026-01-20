@@ -1,6 +1,6 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use secrecy::ExposeSecret;
 use uuid::Uuid;
 
@@ -11,6 +11,8 @@ use crate::models::{AccessTokenClaims, RefreshTokenClaims, TokenPair};
 pub struct JwtService {
     encoding_key: EncodingKey,
     decoding_key: DecodingKey,
+    previous_decoding_key: Option<DecodingKey>,
+    key_id: String,
     issuer: String,
     access_token_expiration_minutes: i64,
     refresh_token_expiration_days: i64,
@@ -41,9 +43,24 @@ impl JwtService {
         let decoding_key = DecodingKey::from_ec_pem(public_key_pem.as_bytes())
             .map_err(|e| AppError::InternalServerError(format!("Invalid JWT public key: {}", e)))?;
 
+        // Load previous key if configured (for key rotation)
+        let previous_decoding_key = if let Some(ref prev_key) = config.previous_public_key {
+            let prev_key_pem = decode_pem_key(prev_key);
+            Some(DecodingKey::from_ec_pem(prev_key_pem.as_bytes())
+                .map_err(|e| AppError::InternalServerError(format!("Invalid previous JWT public key: {}", e)))?)
+        } else {
+            None
+        };
+
+        if previous_decoding_key.is_some() {
+            tracing::info!("JWT key rotation enabled - validating against current and previous keys");
+        }
+
         Ok(Self {
             encoding_key,
             decoding_key,
+            previous_decoding_key,
+            key_id: config.key_id.clone(),
             issuer: config.issuer.clone(),
             access_token_expiration_minutes: config.access_token_expiration_minutes,
             refresh_token_expiration_days: config.refresh_token_expiration_days,
@@ -57,6 +74,7 @@ impl JwtService {
         client_project: Option<&str>,
         family_id: Option<&str>,
         generation: u32,
+        device_hash: Option<&str>,
     ) -> Result<TokenPair> {
         let access_token = self.create_access_token(user_id, email, client_project)?;
         let refresh_token = self.create_refresh_token(
@@ -64,6 +82,7 @@ impl JwtService {
             client_project,
             family_id.unwrap_or(&Uuid::new_v4().to_string()),
             generation,
+            device_hash,
         )?;
 
         Ok(TokenPair::new(
@@ -93,7 +112,8 @@ impl JwtService {
             client_project: client_project.map(String::from),
         };
 
-        let header = Header::new(jsonwebtoken::Algorithm::ES256);
+        let mut header = Header::new(jsonwebtoken::Algorithm::ES256);
+        header.kid = Some(self.key_id.clone());
         let token = encode(&header, &claims, &self.encoding_key)?;
 
         Ok(token)
@@ -105,6 +125,7 @@ impl JwtService {
         client_project: Option<&str>,
         family_id: &str,
         generation: u32,
+        device_hash: Option<&str>,
     ) -> Result<String> {
         let now = Utc::now();
         let exp = now + Duration::days(self.refresh_token_expiration_days);
@@ -119,9 +140,11 @@ impl JwtService {
             family_id: family_id.to_string(),
             generation,
             client_project: client_project.map(String::from),
+            device_hash: device_hash.map(String::from),
         };
 
-        let header = Header::new(jsonwebtoken::Algorithm::ES256);
+        let mut header = Header::new(jsonwebtoken::Algorithm::ES256);
+        header.kid = Some(self.key_id.clone());
         let token = encode(&header, &claims, &self.encoding_key)?;
 
         Ok(token)
@@ -132,15 +155,26 @@ impl JwtService {
         validation.set_issuer(&[&self.issuer]);
         validation.set_audience(&["auth-service"]);
 
-        let token_data: TokenData<AccessTokenClaims> =
-            decode(token, &self.decoding_key, &validation).map_err(|e| {
-                match e.kind() {
+        // Try current key first
+        match decode::<AccessTokenClaims>(token, &self.decoding_key, &validation) {
+            Ok(token_data) => return Ok(token_data.claims),
+            Err(e) => {
+                // If we have a previous key and the error isn't expiration, try it
+                if let Some(ref prev_key) = self.previous_decoding_key {
+                    if !matches!(e.kind(), jsonwebtoken::errors::ErrorKind::ExpiredSignature) {
+                        if let Ok(token_data) = decode::<AccessTokenClaims>(token, prev_key, &validation) {
+                            tracing::debug!("Token validated with previous key");
+                            return Ok(token_data.claims);
+                        }
+                    }
+                }
+                // Return the original error
+                return Err(match e.kind() {
                     jsonwebtoken::errors::ErrorKind::ExpiredSignature => AppError::TokenExpired,
                     _ => AppError::InvalidToken,
-                }
-            })?;
-
-        Ok(token_data.claims)
+                });
+            }
+        }
     }
 
     pub fn verify_refresh_token(&self, token: &str) -> Result<RefreshTokenClaims> {
@@ -148,15 +182,26 @@ impl JwtService {
         validation.set_issuer(&[&self.issuer]);
         validation.set_audience(&["auth-service-refresh"]);
 
-        let token_data: TokenData<RefreshTokenClaims> =
-            decode(token, &self.decoding_key, &validation).map_err(|e| {
-                match e.kind() {
+        // Try current key first
+        match decode::<RefreshTokenClaims>(token, &self.decoding_key, &validation) {
+            Ok(token_data) => return Ok(token_data.claims),
+            Err(e) => {
+                // If we have a previous key and the error isn't expiration, try it
+                if let Some(ref prev_key) = self.previous_decoding_key {
+                    if !matches!(e.kind(), jsonwebtoken::errors::ErrorKind::ExpiredSignature) {
+                        if let Ok(token_data) = decode::<RefreshTokenClaims>(token, prev_key, &validation) {
+                            tracing::debug!("Refresh token validated with previous key");
+                            return Ok(token_data.claims);
+                        }
+                    }
+                }
+                // Return the original error
+                return Err(match e.kind() {
                     jsonwebtoken::errors::ErrorKind::ExpiredSignature => AppError::TokenExpired,
                     _ => AppError::InvalidToken,
-                }
-            })?;
-
-        Ok(token_data.claims)
+                });
+            }
+        }
     }
 
     pub fn get_access_token_expiration_seconds(&self) -> i64 {
@@ -169,6 +214,8 @@ impl Clone for JwtService {
         Self {
             encoding_key: self.encoding_key.clone(),
             decoding_key: self.decoding_key.clone(),
+            previous_decoding_key: self.previous_decoding_key.clone(),
+            key_id: self.key_id.clone(),
             issuer: self.issuer.clone(),
             access_token_expiration_minutes: self.access_token_expiration_minutes,
             refresh_token_expiration_days: self.refresh_token_expiration_days,

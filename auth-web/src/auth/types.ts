@@ -20,7 +20,6 @@ export interface AuthResponse extends AuthTokens {
 
 export interface AuthConfig {
   apiUrl: string;
-  apiKey: string;
 }
 
 export interface AuthState {
