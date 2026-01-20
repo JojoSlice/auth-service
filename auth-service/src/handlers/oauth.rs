@@ -120,11 +120,11 @@ pub async fn oauth_callback(
     if let Some(AnomalyResult::BruteForceDetected { lockout_until, .. }) =
         state.anomaly_detection_service.check_ip_lockout(ip)
     {
-            tracing::warn!(
-                ip = %ip,
-                lockout_until = %lockout_until,
-                "OAuth callback blocked - IP is locked out"
-            );
+        tracing::warn!(
+            ip = %ip,
+            lockout_until = %lockout_until,
+            "OAuth callback blocked - IP is locked out"
+        );
         return (
             StatusCode::TOO_MANY_REQUESTS,
             Json(serde_json::json!({
