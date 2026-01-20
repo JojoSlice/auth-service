@@ -2,6 +2,7 @@
 // Used by the security CI pipeline to enforce security best practices
 
 import security from 'eslint-plugin-security';
+import tseslint from 'typescript-eslint';
 
 export default [
   {
@@ -12,6 +13,7 @@ export default [
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
+      parser: tseslint.parser,
     },
     rules: {
       // ============================================

@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
 
@@ -113,7 +113,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: Install ESLint security plugin
-        run: npm install --save-dev eslint-plugin-security
+        run: npm install --save-dev eslint-plugin-security typescript-eslint
 
       - name: Run ESLint with security rules
         run: |
