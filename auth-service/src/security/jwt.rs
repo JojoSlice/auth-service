@@ -37,9 +37,8 @@ impl JwtService {
         let private_key_pem = decode_pem_key(config.private_key.expose_secret());
         let public_key_pem = decode_pem_key(&config.public_key);
 
-        let encoding_key = EncodingKey::from_ec_pem(private_key_pem.as_bytes()).map_err(|e| {
-            AppError::InternalServerError(format!("Invalid JWT private key: {e}"))
-        })?;
+        let encoding_key = EncodingKey::from_ec_pem(private_key_pem.as_bytes())
+            .map_err(|e| AppError::InternalServerError(format!("Invalid JWT private key: {e}")))?;
 
         let decoding_key = DecodingKey::from_ec_pem(public_key_pem.as_bytes())
             .map_err(|e| AppError::InternalServerError(format!("Invalid JWT public key: {e}")))?;

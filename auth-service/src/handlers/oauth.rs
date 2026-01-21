@@ -243,9 +243,7 @@ pub async fn oauth_callback(
                 previous_ip,
                 current_ip,
             } => {
-                format!(
-                    "Login from new IP: {current_ip} (previous: {previous_ip})"
-                )
+                format!("Login from new IP: {current_ip} (previous: {previous_ip})")
             }
             AnomalyResult::ImpossibleTravel {
                 previous_location,

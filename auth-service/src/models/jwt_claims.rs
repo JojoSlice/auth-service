@@ -118,10 +118,7 @@ impl DeviceInfo {
         }
 
         let result = hasher.finalize();
-        result
-            .get(..16)
-            .map(hex::encode)
-            .unwrap_or_default() // Use first 16 bytes (128 bits) for shorter hash
+        result.get(..16).map(hex::encode).unwrap_or_default() // Use first 16 bytes (128 bits) for shorter hash
     }
 
     /// Extract IP subnet from a full IP address
