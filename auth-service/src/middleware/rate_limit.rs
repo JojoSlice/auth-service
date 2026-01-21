@@ -50,7 +50,7 @@ impl RateLimiter {
             return true;
         }
 
-        let limit = custom_limit.map_or(self.config.global_per_minute, |l| l.cast_unsigned());
+        let limit = custom_limit.map_or(self.config.global_per_minute, i32::cast_unsigned);
         Self::check_limit(&self.api_key_limits, key_id, limit)
     }
 
