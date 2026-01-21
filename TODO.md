@@ -90,6 +90,18 @@ Implementerat i `auth-service/src/services/anomaly_detection.rs`:
 - **Audit logging**: Loggar alla anomalier till audit_logs-tabellen
 - **AuditEventType**: Nya typer `LoginAnomaly` och `BruteForceDetected`
 
+### Database Encryption at Rest ✅
+
+Implementerat fältkryptering för känslig data i audit_logs:
+- Utökat `AuditLogRepository` med `EncryptionService` (AES-256-GCM)
+- Krypterade fält: `metadata`, `user_agent`
+- Automatisk kryptering vid INSERT, dekryptering vid SELECT
+- Ej krypterade (behövs för queries): `email`, `ip_address`
+
+Filer:
+- `auth-service/src/db/repositories/audit_log_repository.rs`
+- `auth-service/src/app_state.rs`
+
 ---
 
 ## Övriga förbättringar
@@ -296,4 +308,4 @@ sqlx = { version = "0.7", features = ["sqlite", "sqlcipher"] }
 | 🟢 Låg | Rate limiting frontend | Låg | ✅ Klar |
 | 🟢 Låg | SRI | Låg | |
 | 🟢 Låg | Request Signing | Medel | |
-| 🟢 Låg | Database Encryption | Medel | |
+| 🟢 Låg | Database Encryption | Medel | ✅ Klar |
