@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
     tracing::info!("Server listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.map_err(|e| {
-        auth_service::AppError::InternalServerError(format!("Failed to bind to address: {}", e))
+        auth_service::AppError::InternalServerError(format!("Failed to bind to address: {e}"))
     })?;
 
     axum::serve(
@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
     )
     .with_graceful_shutdown(shutdown_signal())
     .await
-    .map_err(|e| auth_service::AppError::InternalServerError(format!("Server error: {}", e)))?;
+    .map_err(|e| auth_service::AppError::InternalServerError(format!("Server error: {e}")))?;
 
     tracing::info!("Server shutdown complete");
 
@@ -70,6 +70,7 @@ fn init_logging(level: &str, format: &str) {
     }
 }
 
+#[allow(clippy::expect_used)]
 async fn shutdown_signal() {
     let ctrl_c = async {
         signal::ctrl_c()
@@ -89,10 +90,10 @@ async fn shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {
+        () = ctrl_c => {
             tracing::info!("Received Ctrl+C, starting graceful shutdown...");
         },
-        _ = terminate => {
+        () = terminate => {
             tracing::info!("Received terminate signal, starting graceful shutdown...");
         },
     }
