@@ -1,4 +1,4 @@
-# Bibblo
+# Auth Service
 
 En säkerhetsfokuserad OAuth-autentiseringstjänst byggd för att hantera centraliserad autentisering för multipla klientapplikationer.
 
