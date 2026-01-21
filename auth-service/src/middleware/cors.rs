@@ -16,7 +16,7 @@ pub fn create_cors_layer(config: &CorsConfig) -> CorsLayer {
         .filter_map(|s| s.trim().parse().ok())
         .collect();
 
-    if origins.is_empty() || config.default_allowed_origins.contains("*") {
+    if origins.is_empty() || config.default_allowed_origins.contains('*') {
         CorsLayer::new()
             .allow_origin(Any)
             .allow_methods([

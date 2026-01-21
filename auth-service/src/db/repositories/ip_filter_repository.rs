@@ -9,16 +9,17 @@ pub struct IpFilterRepository {
 }
 
 impl IpFilterRepository {
+    #[must_use]
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 
     pub async fn create(&self, filter: &IpFilter) -> Result<()> {
         sqlx::query(
-            r#"
+            r"
             INSERT INTO ip_filters (id, ip_address, filter_type, reason, is_active, expires_at, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
+            ",
         )
         .bind(&filter.id)
         .bind(&filter.ip_address)

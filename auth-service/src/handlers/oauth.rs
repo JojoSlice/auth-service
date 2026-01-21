@@ -71,7 +71,7 @@ pub async fn oauth_init(
 ) -> Result<Json<OAuthInitResponse>> {
     let provider_name: ProviderName = provider
         .parse()
-        .map_err(|_| AppError::BadRequest(format!("Unknown provider: {}", provider)))?;
+        .map_err(|_| AppError::BadRequest(format!("Unknown provider: {provider}")))?;
 
     let oauth_state = state
         .auth_service
@@ -80,7 +80,7 @@ pub async fn oauth_init(
     let scopes: Vec<&str> = request
         .scopes
         .as_ref()
-        .map(|s| s.split(',').map(|s| s.trim()).collect())
+        .map(|s| s.split(',').map(str::trim).collect())
         .unwrap_or_default();
 
     let authorization_url = match provider_name {
@@ -104,6 +104,7 @@ pub async fn oauth_init(
     }))
 }
 
+#[allow(clippy::too_many_lines)]
 pub async fn oauth_callback(
     State(state): State<OAuthHandlerState>,
     Path(provider): Path<String>,
@@ -170,7 +171,7 @@ pub async fn oauth_callback(
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({
                     "error": "invalid_provider",
-                    "error_description": format!("Unknown provider: {}", provider)
+                    "error_description": format!("Unknown provider: {provider}")
                 })),
             )
                 .into_response();
@@ -211,7 +212,7 @@ pub async fn oauth_callback(
         Ok(result) => result,
         Err(e) => {
             // Record failed attempt for this IP
-            state.anomaly_detection_service.record_failed_attempt(ip);
+            let _ = state.anomaly_detection_service.record_failed_attempt(ip);
 
             tracing::error!(error = %e, provider = %provider_name, "OAuth callback failed");
             return (
@@ -243,8 +244,7 @@ pub async fn oauth_callback(
                 current_ip,
             } => {
                 format!(
-                    "Login from new IP: {} (previous: {})",
-                    current_ip, previous_ip
+                    "Login from new IP: {current_ip} (previous: {previous_ip})"
                 )
             }
             AnomalyResult::ImpossibleTravel {
@@ -253,12 +253,11 @@ pub async fn oauth_callback(
                 time_diff_minutes,
             } => {
                 format!(
-                    "Suspicious location change: {} -> {} in {} minutes",
-                    previous_location, current_location, time_diff_minutes
+                    "Suspicious location change: {previous_location} -> {current_location} in {time_diff_minutes} minutes"
                 )
             }
             AnomalyResult::UnusualPattern { reason } => {
-                format!("Unusual pattern: {}", reason)
+                format!("Unusual pattern: {reason}")
             }
             _ => "Unknown anomaly".to_string(),
         };
@@ -282,7 +281,7 @@ pub async fn oauth_callback(
     }
 
     if let Some(redirect_uri) = redirect_uri {
-        let redirect_url = format!(
+        let final_redirect_url = format!(
             "{}?access_token={}&refresh_token={}&token_type={}&expires_in={}",
             redirect_uri,
             token_pair.access_token,
@@ -290,7 +289,7 @@ pub async fn oauth_callback(
             token_pair.token_type,
             token_pair.expires_in
         );
-        return Redirect::temporary(&redirect_url).into_response();
+        return Redirect::temporary(&final_redirect_url).into_response();
     }
 
     Json(OAuthCallbackResponse {

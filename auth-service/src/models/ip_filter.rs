@@ -11,6 +11,7 @@ pub enum FilterType {
 }
 
 impl FilterType {
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             FilterType::Whitelist => "whitelist",
@@ -32,7 +33,7 @@ impl std::str::FromStr for FilterType {
         match s.to_lowercase().as_str() {
             "whitelist" => Ok(FilterType::Whitelist),
             "blacklist" => Ok(FilterType::Blacklist),
-            _ => Err(format!("Unknown filter type: {}", s)),
+            _ => Err(format!("Unknown filter type: {s}")),
         }
     }
 }
@@ -50,6 +51,7 @@ pub struct IpFilter {
 }
 
 impl IpFilter {
+    #[must_use]
     pub fn new(ip_address: String, filter_type: FilterType, reason: Option<String>) -> Self {
         let now = Utc::now().to_rfc3339();
         Self {
@@ -64,11 +66,13 @@ impl IpFilter {
         }
     }
 
+    #[must_use]
     pub fn with_expiration(mut self, expires_at: String) -> Self {
         self.expires_at = Some(expires_at);
         self
     }
 
+    #[must_use]
     pub fn is_expired(&self) -> bool {
         if let Some(expires_at) = &self.expires_at {
             if let Ok(exp) = chrono::DateTime::parse_from_rfc3339(expires_at) {
@@ -78,6 +82,7 @@ impl IpFilter {
         false
     }
 
+    #[must_use]
     pub fn get_filter_type(&self) -> Option<FilterType> {
         self.filter_type.parse().ok()
     }

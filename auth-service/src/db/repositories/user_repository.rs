@@ -9,16 +9,17 @@ pub struct UserRepository {
 }
 
 impl UserRepository {
+    #[must_use]
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 
     pub async fn create(&self, user: &User) -> Result<()> {
         sqlx::query(
-            r#"
+            r"
             INSERT INTO users (id, email, display_name, profile_picture_url, is_active, email_verified, created_at, updated_at, last_login_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
+            ",
         )
         .bind(&user.id)
         .bind(&user.email)

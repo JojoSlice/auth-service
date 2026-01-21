@@ -18,7 +18,7 @@ const GOOGLE_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL: &str = "https://www.googleapis.com/oauth2/v2/userinfo";
 
-/// OAuth2 client with auth and token endpoints configured
+/// `OAuth2` client with auth and token endpoints configured
 type ConfiguredClient = oauth2::Client<
     StandardErrorResponse<BasicErrorResponseType>,
     StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
@@ -40,11 +40,11 @@ pub struct GoogleOAuthProvider {
 impl GoogleOAuthProvider {
     pub fn new(config: &GoogleOAuthConfig) -> Result<Self> {
         let auth_url = AuthUrl::new(GOOGLE_AUTH_URL.to_string())
-            .map_err(|e| AppError::OAuth(format!("Invalid auth URL: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Invalid auth URL: {e}")))?;
         let token_url = TokenUrl::new(GOOGLE_TOKEN_URL.to_string())
-            .map_err(|e| AppError::OAuth(format!("Invalid token URL: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Invalid token URL: {e}")))?;
         let redirect_url = RedirectUrl::new(config.redirect_uri.clone())
-            .map_err(|e| AppError::OAuth(format!("Invalid redirect URI: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Invalid redirect URI: {e}")))?;
 
         let client = BasicClient::new(ClientId::new(config.client_id.expose_secret().to_string()))
             .set_client_secret(ClientSecret::new(
@@ -57,7 +57,7 @@ impl GoogleOAuthProvider {
         let http_client = Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
-            .map_err(|e| AppError::OAuth(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Failed to create HTTP client: {e}")))?;
 
         Ok(Self {
             client,
@@ -101,7 +101,7 @@ impl OAuthProvider for GoogleOAuthProvider {
             .exchange_code(AuthorizationCode::new(code.to_string()))
             .request_async(&http_client)
             .await
-            .map_err(|e| AppError::OAuth(format!("Failed to exchange code: {:?}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Failed to exchange code: {e:?}")))?;
 
         Ok(OAuthTokens {
             access_token: token_result.access_token().secret().clone(),
@@ -123,17 +123,17 @@ impl OAuthProvider for GoogleOAuthProvider {
             .bearer_auth(access_token)
             .send()
             .await
-            .map_err(|e| AppError::OAuth(format!("Failed to get user info: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Failed to get user info: {e}")))?;
 
         if !response.status().is_success() {
             let error_body = response.text().await.unwrap_or_default();
-            return Err(AppError::OAuth(format!("Google API error: {}", error_body)));
+            return Err(AppError::OAuth(format!("Google API error: {error_body}")));
         }
 
         let user_info: GoogleUserInfo = response
             .json()
             .await
-            .map_err(|e| AppError::OAuth(format!("Failed to parse user info: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Failed to parse user info: {e}")))?;
 
         Ok(OAuthUserInfo {
             provider: ProviderName::Google,

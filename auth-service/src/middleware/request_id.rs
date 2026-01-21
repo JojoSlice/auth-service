@@ -13,8 +13,7 @@ pub async fn request_id_middleware(mut request: Request, next: Next) -> Response
         .headers()
         .get(REQUEST_ID_HEADER)
         .and_then(|v| v.to_str().ok())
-        .map(String::from)
-        .unwrap_or_else(|| Uuid::new_v4().to_string());
+        .map_or_else(|| Uuid::new_v4().to_string(), String::from);
 
     request
         .extensions_mut()
@@ -35,6 +34,7 @@ pub async fn request_id_middleware(mut request: Request, next: Next) -> Response
 pub struct RequestId(pub String);
 
 impl RequestId {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }

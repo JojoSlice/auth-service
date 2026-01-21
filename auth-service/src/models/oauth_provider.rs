@@ -11,6 +11,7 @@ pub enum ProviderName {
 }
 
 impl ProviderName {
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             ProviderName::Google => "google",
@@ -32,7 +33,7 @@ impl std::str::FromStr for ProviderName {
         match s.to_lowercase().as_str() {
             "google" => Ok(ProviderName::Google),
             "github" => Ok(ProviderName::Github),
-            _ => Err(format!("Unknown provider: {}", s)),
+            _ => Err(format!("Unknown provider: {s}")),
         }
     }
 }
@@ -53,6 +54,7 @@ pub struct OAuthProvider {
 }
 
 impl OAuthProvider {
+    #[must_use]
     pub fn new(user_id: String, provider_name: ProviderName, provider_user_id: String) -> Self {
         let now = Utc::now().to_rfc3339();
         Self {
@@ -70,6 +72,7 @@ impl OAuthProvider {
         }
     }
 
+    #[must_use]
     pub fn with_tokens(
         mut self,
         access_token_encrypted: String,
@@ -82,11 +85,13 @@ impl OAuthProvider {
         self
     }
 
+    #[must_use]
     pub fn with_scope(mut self, scope: String) -> Self {
         self.scope = Some(scope);
         self
     }
 
+    #[must_use]
     pub fn with_provider_data(mut self, data: String) -> Self {
         self.provider_data = Some(data);
         self

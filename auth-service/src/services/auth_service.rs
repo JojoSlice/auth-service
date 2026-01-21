@@ -16,6 +16,7 @@ pub struct AuthService {
 }
 
 impl AuthService {
+    #[must_use]
     pub fn new(
         user_repository: Arc<UserRepository>,
         oauth_provider_repository: Arc<OAuthProviderRepository>,
@@ -32,6 +33,7 @@ impl AuthService {
         }
     }
 
+    #[must_use]
     pub fn create_oauth_state(&self, client_project: &str, redirect_uri: Option<String>) -> String {
         self.state_manager
             .create_state(client_project, redirect_uri)
@@ -61,7 +63,7 @@ impl AuthService {
         self.user_repository.update_last_login(&user.id).await?;
 
         // Compute device hash for token binding
-        let device_hash = device_info.map(|d| d.compute_hash());
+        let device_hash = device_info.map(DeviceInfo::compute_hash);
 
         let token_pair = self.jwt_service.create_token_pair(
             &user.id,

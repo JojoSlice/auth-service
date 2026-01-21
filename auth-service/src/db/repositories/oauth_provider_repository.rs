@@ -9,16 +9,17 @@ pub struct OAuthProviderRepository {
 }
 
 impl OAuthProviderRepository {
+    #[must_use]
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 
     pub async fn create(&self, provider: &OAuthProvider) -> Result<()> {
         sqlx::query(
-            r#"
+            r"
             INSERT INTO oauth_providers (id, user_id, provider_name, provider_user_id, access_token_encrypted, refresh_token_encrypted, token_expires_at, scope, provider_data, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
+            ",
         )
         .bind(&provider.id)
         .bind(&provider.user_id)
@@ -82,11 +83,11 @@ impl OAuthProviderRepository {
     ) -> Result<()> {
         let now = Utc::now().to_rfc3339();
         sqlx::query(
-            r#"
+            r"
             UPDATE oauth_providers
             SET access_token_encrypted = ?, refresh_token_encrypted = ?, token_expires_at = ?, updated_at = ?
             WHERE id = ?
-            "#,
+            ",
         )
         .bind(access_token_encrypted)
         .bind(refresh_token_encrypted)
@@ -109,11 +110,12 @@ impl OAuthProviderRepository {
     }
 
     pub async fn upsert(&self, provider: &OAuthProvider) -> Result<()> {
+        let provider_name = provider
+            .provider_name
+            .parse()
+            .map_err(|_| crate::error::AppError::BadRequest("Invalid provider name".to_string()))?;
         let existing = self
-            .find_by_provider_user(
-                provider.provider_name.parse().unwrap(),
-                &provider.provider_user_id,
-            )
+            .find_by_provider_user(provider_name, &provider.provider_user_id)
             .await?;
 
         if let Some(existing) = existing {

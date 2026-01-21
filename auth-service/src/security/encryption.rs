@@ -18,14 +18,14 @@ impl EncryptionService {
     pub fn new(key: &SecretString) -> Result<Self> {
         let key_bytes = Self::derive_key(key.expose_secret())?;
         let cipher = Aes256Gcm::new_from_slice(&key_bytes)
-            .map_err(|e| AppError::InternalServerError(format!("Invalid encryption key: {}", e)))?;
+            .map_err(|e| AppError::InternalServerError(format!("Invalid encryption key: {e}")))?;
 
         Ok(Self { cipher })
     }
 
     fn derive_key(key_str: &str) -> Result<[u8; 32]> {
         let decoded = BASE64.decode(key_str).map_err(|e| {
-            AppError::InternalServerError(format!("Invalid encryption key encoding: {}", e))
+            AppError::InternalServerError(format!("Invalid encryption key encoding: {e}"))
         })?;
 
         if decoded.len() < 32 {
@@ -35,7 +35,10 @@ impl EncryptionService {
         }
 
         let mut key = [0u8; 32];
-        key.copy_from_slice(&decoded[..32]);
+        let key_slice = decoded
+            .get(..32)
+            .ok_or_else(|| AppError::InternalServerError("Failed to get key bytes".to_string()))?;
+        key.copy_from_slice(key_slice);
         Ok(key)
     }
 
@@ -47,7 +50,7 @@ impl EncryptionService {
         let ciphertext = self
             .cipher
             .encrypt(nonce, plaintext.as_bytes())
-            .map_err(|e| AppError::InternalServerError(format!("Encryption failed: {}", e)))?;
+            .map_err(|e| AppError::InternalServerError(format!("Encryption failed: {e}")))?;
 
         let mut result = Vec::with_capacity(NONCE_SIZE + ciphertext.len());
         result.extend_from_slice(&nonce_bytes);
@@ -58,7 +61,7 @@ impl EncryptionService {
 
     pub fn decrypt(&self, encrypted: &str) -> Result<String> {
         let data = BASE64.decode(encrypted).map_err(|e| {
-            AppError::InternalServerError(format!("Invalid encrypted data encoding: {}", e))
+            AppError::InternalServerError(format!("Invalid encrypted data encoding: {e}"))
         })?;
 
         if data.len() < NONCE_SIZE {
@@ -76,7 +79,7 @@ impl EncryptionService {
             .map_err(|_| AppError::InternalServerError("Decryption failed".to_string()))?;
 
         String::from_utf8(plaintext).map_err(|e| {
-            AppError::InternalServerError(format!("Invalid UTF-8 in decrypted data: {}", e))
+            AppError::InternalServerError(format!("Invalid UTF-8 in decrypted data: {e}"))
         })
     }
 }

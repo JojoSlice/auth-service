@@ -41,7 +41,7 @@ pub async fn audit_middleware(
 
     let response = next.run(request).await;
 
-    let status_code = response.status().as_u16() as i32;
+    let status_code = i32::from(response.status().as_u16());
 
     let event_type = determine_event_type(&path, &method, status_code);
 
@@ -82,9 +82,8 @@ fn determine_event_type(path: &str, method: &str, status_code: i32) -> Option<Au
     if path.contains("/auth/oauth") && path.contains("/callback") {
         if (200..300).contains(&status_code) {
             return Some(AuditEventType::OAuthSuccess);
-        } else {
-            return Some(AuditEventType::OAuthFailure);
         }
+        return Some(AuditEventType::OAuthFailure);
     }
 
     if path.contains("/token/refresh") && method == "POST" {
@@ -94,9 +93,8 @@ fn determine_event_type(path: &str, method: &str, status_code: i32) -> Option<Au
     if path.contains("/token/validate") && method == "POST" {
         if (200..300).contains(&status_code) {
             return Some(AuditEventType::TokenValidated);
-        } else {
-            return Some(AuditEventType::TokenValidationFailed);
         }
+        return Some(AuditEventType::TokenValidationFailed);
     }
 
     if path.contains("/token/revoke") && method == "POST" {

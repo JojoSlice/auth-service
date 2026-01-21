@@ -39,6 +39,7 @@ pub struct TokenPair {
 }
 
 impl TokenPair {
+    #[must_use]
     pub fn new(access_token: String, refresh_token: String, expires_in: i64) -> Self {
         Self {
             access_token,
@@ -96,6 +97,7 @@ pub struct DeviceInfo {
 impl DeviceInfo {
     /// Compute a hash of the device information for token binding.
     /// Uses only stable characteristics to minimize false positives.
+    #[must_use]
     pub fn compute_hash(&self) -> String {
         let mut hasher = Sha256::new();
 
@@ -116,10 +118,14 @@ impl DeviceInfo {
         }
 
         let result = hasher.finalize();
-        hex::encode(&result[..16]) // Use first 16 bytes (128 bits) for shorter hash
+        result
+            .get(..16)
+            .map(hex::encode)
+            .unwrap_or_default() // Use first 16 bytes (128 bits) for shorter hash
     }
 
     /// Extract IP subnet from a full IP address
+    #[must_use]
     pub fn extract_subnet(ip: &str) -> Option<String> {
         if let Ok(addr) = ip.parse::<std::net::IpAddr>() {
             match addr {

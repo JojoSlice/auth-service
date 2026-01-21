@@ -18,6 +18,7 @@ pub struct User {
 }
 
 impl User {
+    #[must_use]
     pub fn new(
         email: String,
         display_name: Option<String>,
@@ -37,6 +38,7 @@ impl User {
         }
     }
 
+    #[must_use]
     pub fn with_email_verified(mut self) -> Self {
         self.email_verified = true;
         self

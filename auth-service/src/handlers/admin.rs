@@ -85,7 +85,7 @@ pub async fn create_api_key(
         prefix,
         request.name,
         request.client_project,
-        request.allowed_origins,
+        &request.allowed_origins,
     )
     .with_rate_limit(request.rate_limit_per_minute);
 

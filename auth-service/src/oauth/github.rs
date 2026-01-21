@@ -19,7 +19,7 @@ const GITHUB_TOKEN_URL: &str = "https://github.com/login/oauth/access_token";
 const GITHUB_USER_URL: &str = "https://api.github.com/user";
 const GITHUB_EMAILS_URL: &str = "https://api.github.com/user/emails";
 
-/// OAuth2 client with auth and token endpoints configured
+/// `OAuth2` client with auth and token endpoints configured
 type ConfiguredClient = oauth2::Client<
     StandardErrorResponse<BasicErrorResponseType>,
     StandardTokenResponse<EmptyExtraTokenFields, BasicTokenType>,
@@ -41,11 +41,11 @@ pub struct GitHubOAuthProvider {
 impl GitHubOAuthProvider {
     pub fn new(config: &GitHubOAuthConfig) -> Result<Self> {
         let auth_url = AuthUrl::new(GITHUB_AUTH_URL.to_string())
-            .map_err(|e| AppError::OAuth(format!("Invalid auth URL: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Invalid auth URL: {e}")))?;
         let token_url = TokenUrl::new(GITHUB_TOKEN_URL.to_string())
-            .map_err(|e| AppError::OAuth(format!("Invalid token URL: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Invalid token URL: {e}")))?;
         let redirect_url = RedirectUrl::new(config.redirect_uri.clone())
-            .map_err(|e| AppError::OAuth(format!("Invalid redirect URI: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Invalid redirect URI: {e}")))?;
 
         let client = BasicClient::new(ClientId::new(config.client_id.expose_secret().to_string()))
             .set_client_secret(ClientSecret::new(
@@ -59,7 +59,7 @@ impl GitHubOAuthProvider {
             .user_agent("Auth-Service")
             .timeout(std::time::Duration::from_secs(30))
             .build()
-            .map_err(|e| AppError::OAuth(format!("Failed to create HTTP client: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Failed to create HTTP client: {e}")))?;
 
         Ok(Self {
             client,
@@ -75,7 +75,7 @@ impl GitHubOAuthProvider {
             .header("Accept", "application/vnd.github+json")
             .send()
             .await
-            .map_err(|e| AppError::OAuth(format!("Failed to get user emails: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Failed to get user emails: {e}")))?;
 
         if !response.status().is_success() {
             return Err(AppError::OAuth("Failed to fetch GitHub emails".to_string()));
@@ -84,7 +84,7 @@ impl GitHubOAuthProvider {
         let emails: Vec<GitHubEmail> = response
             .json()
             .await
-            .map_err(|e| AppError::OAuth(format!("Failed to parse emails: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Failed to parse emails: {e}")))?;
 
         let primary_email = emails
             .iter()
@@ -133,7 +133,7 @@ impl OAuthProvider for GitHubOAuthProvider {
             .exchange_code(AuthorizationCode::new(code.to_string()))
             .request_async(&http_client)
             .await
-            .map_err(|e| AppError::OAuth(format!("Failed to exchange code: {:?}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Failed to exchange code: {e:?}")))?;
 
         Ok(OAuthTokens {
             access_token: token_result.access_token().secret().clone(),
@@ -156,17 +156,17 @@ impl OAuthProvider for GitHubOAuthProvider {
             .header("Accept", "application/vnd.github+json")
             .send()
             .await
-            .map_err(|e| AppError::OAuth(format!("Failed to get user info: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Failed to get user info: {e}")))?;
 
         if !response.status().is_success() {
             let error_body = response.text().await.unwrap_or_default();
-            return Err(AppError::OAuth(format!("GitHub API error: {}", error_body)));
+            return Err(AppError::OAuth(format!("GitHub API error: {error_body}")));
         }
 
         let user_info: GitHubUserInfo = response
             .json()
             .await
-            .map_err(|e| AppError::OAuth(format!("Failed to parse user info: {}", e)))?;
+            .map_err(|e| AppError::OAuth(format!("Failed to parse user info: {e}")))?;
 
         let (email, email_verified) = if let Some(email) = user_info.email {
             (email, true)

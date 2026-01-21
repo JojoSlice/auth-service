@@ -104,12 +104,14 @@ impl AppState {
         })
     }
 
+    #[must_use]
     pub fn ip_filter_state(&self) -> IpFilterState {
         IpFilterState {
             repository: Arc::clone(&self.ip_filter_repository),
         }
     }
 
+    #[must_use]
     pub fn api_key_state(&self) -> ApiKeyState {
         ApiKeyState {
             repository: Arc::clone(&self.api_key_repository),
@@ -117,18 +119,21 @@ impl AppState {
         }
     }
 
+    #[must_use]
     pub fn auth_state(&self) -> AuthState {
         AuthState {
             jwt_service: Arc::clone(&self.jwt_service),
         }
     }
 
+    #[must_use]
     pub fn audit_state(&self) -> AuditState {
         AuditState {
             repository: Arc::clone(&self.audit_log_repository),
         }
     }
 
+    #[must_use]
     pub fn oauth_handler_state(&self) -> OAuthHandlerState {
         OAuthHandlerState {
             auth_service: Arc::clone(&self.auth_service),
@@ -139,12 +144,14 @@ impl AppState {
         }
     }
 
+    #[must_use]
     pub fn token_handler_state(&self) -> TokenHandlerState {
         TokenHandlerState {
             token_service: Arc::clone(&self.token_service),
         }
     }
 
+    #[must_use]
     pub fn user_handler_state(&self) -> UserHandlerState {
         UserHandlerState {
             user_service: Arc::clone(&self.user_service),
@@ -152,6 +159,7 @@ impl AppState {
         }
     }
 
+    #[must_use]
     pub fn admin_handler_state(&self) -> AdminHandlerState {
         let admin_ip_whitelist: Vec<String> = self
             .config

@@ -33,6 +33,7 @@ pub enum AuditEventType {
 }
 
 impl AuditEventType {
+    #[must_use]
     pub fn as_str(&self) -> &'static str {
         match self {
             AuditEventType::OAuthInitiated => "OAUTH_INITIATED",
@@ -86,6 +87,7 @@ pub struct AuditLog {
 }
 
 impl AuditLog {
+    #[must_use]
     pub fn new(event_type: AuditEventType, ip_address: String) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
@@ -103,11 +105,13 @@ impl AuditLog {
         }
     }
 
+    #[must_use]
     pub fn with_user(mut self, user_id: String) -> Self {
         self.user_id = Some(user_id);
         self
     }
 
+    #[must_use]
     pub fn with_request_info(
         mut self,
         request_id: Option<String>,
@@ -120,22 +124,26 @@ impl AuditLog {
         self
     }
 
+    #[must_use]
     pub fn with_user_agent(mut self, user_agent: String) -> Self {
         self.user_agent = Some(user_agent);
         self
     }
 
+    #[must_use]
     pub fn with_status_code(mut self, status_code: i32) -> Self {
         self.status_code = Some(status_code);
         self
     }
 
+    #[must_use]
     pub fn with_error(mut self, error_message: String) -> Self {
         self.error_message = Some(error_message);
         self
     }
 
-    pub fn with_metadata(mut self, metadata: serde_json::Value) -> Self {
+    #[must_use]
+    pub fn with_metadata(mut self, metadata: &serde_json::Value) -> Self {
         self.metadata = Some(metadata.to_string());
         self
     }
@@ -147,62 +155,74 @@ pub struct AuditLogBuilder {
 }
 
 impl AuditLogBuilder {
+    #[must_use]
     pub fn new(event_type: AuditEventType) -> Self {
         Self {
             log: AuditLog::new(event_type, String::new()),
         }
     }
 
+    #[must_use]
     pub fn user_id(mut self, user_id: &str) -> Self {
         self.log.user_id = Some(user_id.to_string());
         self
     }
 
+    #[must_use]
     pub fn ip_address(mut self, ip: &str) -> Self {
         self.log.ip_address = ip.to_string();
         self
     }
 
+    #[must_use]
     pub fn details(mut self, details: &str) -> Self {
         self.log.metadata = Some(serde_json::json!({ "details": details }).to_string());
         self
     }
 
+    #[must_use]
     pub fn request_id(mut self, request_id: &str) -> Self {
         self.log.request_id = Some(request_id.to_string());
         self
     }
 
+    #[must_use]
     pub fn endpoint(mut self, endpoint: &str) -> Self {
         self.log.endpoint = Some(endpoint.to_string());
         self
     }
 
+    #[must_use]
     pub fn http_method(mut self, method: &str) -> Self {
         self.log.http_method = Some(method.to_string());
         self
     }
 
+    #[must_use]
     pub fn user_agent(mut self, user_agent: &str) -> Self {
         self.log.user_agent = Some(user_agent.to_string());
         self
     }
 
+    #[must_use]
     pub fn status_code(mut self, code: i32) -> Self {
         self.log.status_code = Some(code);
         self
     }
 
+    #[must_use]
     pub fn error(mut self, error: &str) -> Self {
         self.log.error_message = Some(error.to_string());
         self
     }
 
-    pub fn metadata(mut self, metadata: serde_json::Value) -> Self {
+    #[must_use]
+    pub fn metadata(mut self, metadata: &serde_json::Value) -> Self {
         self.log.metadata = Some(metadata.to_string());
         self
     }
 
+    #[must_use]
     pub fn build(self) -> AuditLog {
         self.log
     }

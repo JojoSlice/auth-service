@@ -16,6 +16,7 @@ pub struct OAuthStateData {
 }
 
 impl OAuthStateData {
+    #[must_use]
     pub fn is_expired(&self) -> bool {
         Utc::now() > self.created_at + Duration::minutes(STATE_EXPIRY_MINUTES)
     }
@@ -27,12 +28,14 @@ pub struct OAuthStateManager {
 }
 
 impl OAuthStateManager {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             states: Arc::new(DashMap::new()),
         }
     }
 
+    #[must_use]
     pub fn create_state(&self, client_project: &str, redirect_uri: Option<String>) -> String {
         let state = generate_csrf_state();
         let data = OAuthStateData {

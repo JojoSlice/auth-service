@@ -26,6 +26,7 @@ struct RateLimitBucket {
 }
 
 impl RateLimiter {
+    #[must_use]
     pub fn new(config: RateLimitConfig) -> Self {
         Self {
             ip_limits: Arc::new(DashMap::new()),
@@ -34,6 +35,7 @@ impl RateLimiter {
         }
     }
 
+    #[must_use]
     pub fn check_ip(&self, ip: &str) -> bool {
         if !self.config.enabled {
             return true;
@@ -42,12 +44,13 @@ impl RateLimiter {
         self.check_limit(&self.ip_limits, ip, self.config.global_per_minute)
     }
 
+    #[must_use]
     pub fn check_api_key(&self, key_id: &str, custom_limit: Option<i32>) -> bool {
         if !self.config.enabled {
             return true;
         }
 
-        let limit = custom_limit.unwrap_or(self.config.global_per_minute as i32) as u32;
+        let limit = custom_limit.map_or(self.config.global_per_minute, |l| l as u32);
         self.check_limit(&self.api_key_limits, key_id, limit)
     }
 

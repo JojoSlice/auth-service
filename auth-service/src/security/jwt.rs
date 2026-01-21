@@ -38,18 +38,18 @@ impl JwtService {
         let public_key_pem = decode_pem_key(&config.public_key);
 
         let encoding_key = EncodingKey::from_ec_pem(private_key_pem.as_bytes()).map_err(|e| {
-            AppError::InternalServerError(format!("Invalid JWT private key: {}", e))
+            AppError::InternalServerError(format!("Invalid JWT private key: {e}"))
         })?;
 
         let decoding_key = DecodingKey::from_ec_pem(public_key_pem.as_bytes())
-            .map_err(|e| AppError::InternalServerError(format!("Invalid JWT public key: {}", e)))?;
+            .map_err(|e| AppError::InternalServerError(format!("Invalid JWT public key: {e}")))?;
 
         // Load previous key if configured (for key rotation)
         let previous_decoding_key = if let Some(ref prev_key) = config.previous_public_key {
             let prev_key_pem = decode_pem_key(prev_key);
             Some(
                 DecodingKey::from_ec_pem(prev_key_pem.as_bytes()).map_err(|e| {
-                    AppError::InternalServerError(format!("Invalid previous JWT public key: {}", e))
+                    AppError::InternalServerError(format!("Invalid previous JWT public key: {e}"))
                 })?,
             )
         } else {

@@ -9,16 +9,17 @@ pub struct ApiKeyRepository {
 }
 
 impl ApiKeyRepository {
+    #[must_use]
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 
     pub async fn create(&self, api_key: &ApiKey) -> Result<()> {
         sqlx::query(
-            r#"
+            r"
             INSERT INTO api_keys (id, key_hash, key_prefix, name, client_project, allowed_origins, is_active, rate_limit_per_minute, expires_at, created_at, updated_at, last_used_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
+            ",
         )
         .bind(&api_key.id)
         .bind(&api_key.key_hash)

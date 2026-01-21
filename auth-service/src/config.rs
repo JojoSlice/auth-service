@@ -175,7 +175,7 @@ impl AppConfig {
 
         let config = Config::builder()
             .add_source(File::with_name("config/default").required(false))
-            .add_source(File::with_name(&format!("config/{}", environment)).required(false))
+            .add_source(File::with_name(&format!("config/{environment}")).required(false))
             .add_source(
                 Environment::default()
                     .prefix("AUTH")

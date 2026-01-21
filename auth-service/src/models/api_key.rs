@@ -20,12 +20,13 @@ pub struct ApiKey {
 }
 
 impl ApiKey {
+    #[must_use]
     pub fn new(
         key_hash: String,
         key_prefix: String,
         name: String,
         client_project: String,
-        allowed_origins: Vec<String>,
+        allowed_origins: &[String],
     ) -> Self {
         let now = Utc::now().to_rfc3339();
         Self {
@@ -44,16 +45,19 @@ impl ApiKey {
         }
     }
 
+    #[must_use]
     pub fn with_rate_limit(mut self, rate_limit: i32) -> Self {
         self.rate_limit_per_minute = rate_limit;
         self
     }
 
+    #[must_use]
     pub fn with_expiration(mut self, expires_at: String) -> Self {
         self.expires_at = Some(expires_at);
         self
     }
 
+    #[must_use]
     pub fn get_allowed_origins(&self) -> Vec<String> {
         self.allowed_origins
             .split(',')
@@ -62,6 +66,7 @@ impl ApiKey {
             .collect()
     }
 
+    #[must_use]
     pub fn is_origin_allowed(&self, origin: &str) -> bool {
         let origins = self.get_allowed_origins();
         if origins.iter().any(|o| o == "*") {
@@ -70,6 +75,7 @@ impl ApiKey {
         origins.iter().any(|o| o == origin)
     }
 
+    #[must_use]
     pub fn is_expired(&self) -> bool {
         if let Some(expires_at) = &self.expires_at {
             if let Ok(exp) = chrono::DateTime::parse_from_rfc3339(expires_at) {

@@ -37,19 +37,19 @@ struct ErrorResponse {
 impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            AppError::Database(e) => write!(f, "Database error: {}", e),
-            AppError::Configuration(e) => write!(f, "Configuration error: {}", e),
-            AppError::OAuth(msg) => write!(f, "OAuth error: {}", msg),
-            AppError::JwtError(e) => write!(f, "JWT error: {}", e),
+            AppError::Database(e) => write!(f, "Database error: {e}"),
+            AppError::Configuration(e) => write!(f, "Configuration error: {e}"),
+            AppError::OAuth(msg) => write!(f, "OAuth error: {msg}"),
+            AppError::JwtError(e) => write!(f, "JWT error: {e}"),
             AppError::InvalidToken => write!(f, "Invalid token"),
             AppError::TokenExpired => write!(f, "Token expired"),
             AppError::Unauthorized => write!(f, "Unauthorized"),
             AppError::Forbidden => write!(f, "Forbidden"),
-            AppError::NotFound(msg) => write!(f, "Not found: {}", msg),
-            AppError::BadRequest(msg) => write!(f, "Bad request: {}", msg),
+            AppError::NotFound(msg) => write!(f, "Not found: {msg}"),
+            AppError::BadRequest(msg) => write!(f, "Bad request: {msg}"),
             AppError::RateLimitExceeded => write!(f, "Rate limit exceeded"),
-            AppError::InternalServerError(msg) => write!(f, "Internal server error: {}", msg),
-            AppError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
+            AppError::InternalServerError(msg) => write!(f, "Internal server error: {msg}"),
+            AppError::ValidationError(msg) => write!(f, "Validation error: {msg}"),
             AppError::DeviceMismatch => write!(f, "Device mismatch detected"),
         }
     }

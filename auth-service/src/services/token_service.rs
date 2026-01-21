@@ -15,6 +15,7 @@ pub struct TokenService {
 }
 
 impl TokenService {
+    #[must_use]
     pub fn new(jwt_service: Arc<JwtService>, user_repository: Arc<UserRepository>) -> Self {
         Self {
             jwt_service,
@@ -96,7 +97,7 @@ impl TokenService {
         let new_generation = claims.generation + 1;
 
         // Compute device hash for the new token
-        let device_hash = device_info.map(|d| d.compute_hash());
+        let device_hash = device_info.map(DeviceInfo::compute_hash);
 
         let now = Utc::now().to_rfc3339();
         self.refresh_token_families.insert(
@@ -139,13 +140,7 @@ impl TokenService {
                 email: Some(claims.email),
                 expires_at: Some(claims.exp),
             }),
-            Err(AppError::TokenExpired) => Ok(ValidateTokenResponse {
-                valid: false,
-                user_id: None,
-                email: None,
-                expires_at: None,
-            }),
-            Err(_) => Ok(ValidateTokenResponse {
+            Err(AppError::TokenExpired) | Err(_) => Ok(ValidateTokenResponse {
                 valid: false,
                 user_id: None,
                 email: None,
@@ -204,7 +199,7 @@ impl TokenService {
         });
 
         self.revoked_families
-            .retain(|family_id, _| self.refresh_token_families.contains_key(family_id));
+            .retain(|family_id, ()| self.refresh_token_families.contains_key(family_id));
     }
 }
 

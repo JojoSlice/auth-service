@@ -13,12 +13,14 @@ pub struct ApiKeyService {
 }
 
 impl ApiKeyService {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             argon2: Argon2::default(),
         }
     }
 
+    #[must_use]
     pub fn generate_api_key(&self) -> (String, String, String) {
         let mut key_bytes = [0u8; API_KEY_LENGTH];
         rand::rng().fill_bytes(&mut key_bytes);
@@ -30,6 +32,11 @@ impl ApiKeyService {
         (key, prefix, hash)
     }
 
+    /// Hashes an API key using Argon2.
+    ///
+    /// # Panics
+    /// Panics if the password hashing algorithm fails, which should not occur
+    /// with valid input and default Argon2 parameters.
     pub fn hash_api_key(&self, key: &str) -> String {
         let salt = SaltString::generate(&mut OsRng);
         self.argon2
@@ -38,10 +45,10 @@ impl ApiKeyService {
             .to_string()
     }
 
+    #[must_use]
     pub fn verify_api_key(&self, key: &str, hash: &str) -> bool {
-        let parsed_hash = match PasswordHash::new(hash) {
-            Ok(h) => h,
-            Err(_) => return false,
+        let Ok(parsed_hash) = PasswordHash::new(hash) else {
+            return false;
         };
 
         self.argon2
@@ -49,6 +56,7 @@ impl ApiKeyService {
             .is_ok()
     }
 
+    #[must_use]
     pub fn get_prefix(key: &str) -> String {
         key[..PREFIX_LENGTH.min(key.len())].to_string()
     }
@@ -66,12 +74,14 @@ impl Clone for ApiKeyService {
     }
 }
 
+#[must_use]
 pub fn generate_random_string(length: usize) -> String {
     let mut bytes = vec![0u8; length];
     rand::rng().fill_bytes(&mut bytes);
     BASE64_URL.encode(&bytes)
 }
 
+#[must_use]
 pub fn generate_csrf_state() -> String {
     generate_random_string(32)
 }

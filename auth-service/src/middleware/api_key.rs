@@ -81,19 +81,16 @@ pub async fn api_key_middleware(
         }
     }
 
-    let key = match validated_key {
-        Some(k) => k,
-        None => {
-            tracing::warn!(prefix = %prefix, "Invalid API key attempted");
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(json!({
-                    "error": "Unauthorized",
-                    "error_description": "Invalid or expired API key"
-                })),
-            )
-                .into_response();
-        }
+    let Some(key) = validated_key else {
+        tracing::warn!(prefix = %prefix, "Invalid API key attempted");
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "error": "Unauthorized",
+                "error_description": "Invalid or expired API key"
+            })),
+        )
+            .into_response();
     };
 
     if let Err(e) = state.repository.update_last_used(&key.id).await {

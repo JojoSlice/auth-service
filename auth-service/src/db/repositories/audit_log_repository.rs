@@ -8,16 +8,17 @@ pub struct AuditLogRepository {
 }
 
 impl AuditLogRepository {
+    #[must_use]
     pub fn new(pool: SqlitePool) -> Self {
         Self { pool }
     }
 
     pub async fn create(&self, log: &AuditLog) -> Result<()> {
         sqlx::query(
-            r#"
+            r"
             INSERT INTO audit_logs (id, timestamp, event_type, user_id, ip_address, user_agent, request_id, endpoint, http_method, status_code, error_message, metadata)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            "#,
+            ",
         )
         .bind(&log.id)
         .bind(&log.timestamp)

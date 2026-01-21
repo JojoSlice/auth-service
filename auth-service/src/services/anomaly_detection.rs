@@ -29,10 +29,12 @@ pub enum AnomalyResult {
 }
 
 impl AnomalyResult {
+    #[must_use]
     pub fn is_blocked(&self) -> bool {
         matches!(self, AnomalyResult::BruteForceDetected { .. })
     }
 
+    #[must_use]
     pub fn should_warn(&self) -> bool {
         !matches!(self, AnomalyResult::Normal)
     }
@@ -106,6 +108,7 @@ pub struct AnomalyDetectionService {
 }
 
 impl AnomalyDetectionService {
+    #[must_use]
     pub fn new(config: AnomalyConfig) -> Self {
         Self {
             config,
@@ -115,6 +118,7 @@ impl AnomalyDetectionService {
     }
 
     /// Check if an IP is currently locked out due to brute force attempts
+    #[must_use]
     pub fn check_ip_lockout(&self, ip: &str) -> Option<AnomalyResult> {
         if let Some(attempts) = self.ip_attempts.get(ip) {
             if let Some(lockout_until) = attempts.lockout_until {
@@ -130,6 +134,7 @@ impl AnomalyDetectionService {
     }
 
     /// Record a failed login attempt from an IP
+    #[must_use]
     pub fn record_failed_attempt(&self, ip: &str) -> AnomalyResult {
         let now = Utc::now();
         let window_start = now - Duration::minutes(self.config.failed_attempt_window_minutes);
@@ -180,6 +185,7 @@ impl AnomalyDetectionService {
     }
 
     /// Check for login anomalies for a user
+    #[must_use]
     pub fn check_login_anomaly(
         &self,
         user_id: &str,
