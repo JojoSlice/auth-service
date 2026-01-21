@@ -45,15 +45,18 @@ impl AppState {
     pub fn new(pool: DbPool, config: AppConfig) -> Result<Self> {
         let config = Arc::new(config);
 
-        let user_repository = Arc::new(UserRepository::new(pool.clone()));
-        let oauth_provider_repository = Arc::new(OAuthProviderRepository::new(pool.clone()));
-        let api_key_repository = Arc::new(ApiKeyRepository::new(pool.clone()));
-        let audit_log_repository = Arc::new(AuditLogRepository::new(pool.clone()));
-        let ip_filter_repository = Arc::new(IpFilterRepository::new(pool.clone()));
-
         let jwt_service = Arc::new(JwtService::new(&config.jwt)?);
         let encryption_service = Arc::new(EncryptionService::new(&config.security.encryption_key)?);
         let api_key_service = Arc::new(ApiKeyService::new());
+
+        let user_repository = Arc::new(UserRepository::new(pool.clone()));
+        let oauth_provider_repository = Arc::new(OAuthProviderRepository::new(pool.clone()));
+        let api_key_repository = Arc::new(ApiKeyRepository::new(pool.clone()));
+        let audit_log_repository = Arc::new(AuditLogRepository::new(
+            pool.clone(),
+            Arc::clone(&encryption_service),
+        ));
+        let ip_filter_repository = Arc::new(IpFilterRepository::new(pool.clone()));
 
         let google_provider = Arc::new(GoogleOAuthProvider::new(&config.oauth.google)?);
         let github_provider = Arc::new(GitHubOAuthProvider::new(&config.oauth.github)?);
