@@ -6,12 +6,12 @@ pub async fn security_headers_middleware(request: Request, next: Next) -> Respon
 
     // Prevent MIME type sniffing
     headers.insert(
-        "x-content-type-options",
+        "X-Content-Type-Options",
         HeaderValue::from_static("nosniff"),
     );
 
     // Prevent clickjacking
-    headers.insert("x-frame-options", HeaderValue::from_static("DENY"));
+    headers.insert("X-Frame-Options", HeaderValue::from_static("DENY"));
 
     // Control referrer information
     headers.insert(
@@ -43,7 +43,7 @@ pub async fn security_headers_middleware(request: Request, next: Next) -> Respon
     // Content Security Policy - strict policy for API responses
     // Since this is an API, we restrict everything
     headers.insert(
-        "content-security-policy",
+        "Content-Security-Policy",
         HeaderValue::from_static(
             "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
         ),
