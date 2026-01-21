@@ -37,6 +37,7 @@ impl ApiKeyService {
     /// # Panics
     /// Panics if the password hashing algorithm fails, which should not occur
     /// with valid input and default Argon2 parameters.
+    #[allow(clippy::expect_used)]
     pub fn hash_api_key(&self, key: &str) -> String {
         let salt = SaltString::generate(&mut OsRng);
         self.argon2

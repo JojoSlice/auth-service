@@ -140,7 +140,7 @@ impl TokenService {
                 email: Some(claims.email),
                 expires_at: Some(claims.exp),
             }),
-            Err(AppError::TokenExpired) | Err(_) => Ok(ValidateTokenResponse {
+            Err(AppError::TokenExpired | _) => Ok(ValidateTokenResponse {
                 valid: false,
                 user_id: None,
                 email: None,

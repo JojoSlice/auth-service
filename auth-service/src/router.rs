@@ -13,6 +13,7 @@ use crate::middleware::{
     rate_limit_middleware, request_id_middleware, security_headers_middleware,
 };
 
+#[allow(clippy::needless_pass_by_value)]
 pub fn create_router(state: AppState) -> Router {
     let cors = create_cors_layer(&state.config.cors);
 

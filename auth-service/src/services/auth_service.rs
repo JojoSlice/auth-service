@@ -139,7 +139,7 @@ impl AuthService {
 
         let expires_at = tokens
             .expires_in
-            .map(|secs| (Utc::now() + chrono::Duration::seconds(secs as i64)).to_rfc3339());
+            .map(|secs| (Utc::now() + chrono::Duration::seconds(secs.cast_signed())).to_rfc3339());
 
         let oauth_provider = OAuthProvider::new(
             user_id.to_string(),

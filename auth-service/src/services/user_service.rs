@@ -10,6 +10,7 @@ pub struct UserService {
 }
 
 impl UserService {
+    #[must_use]
     pub fn new(
         user_repository: Arc<UserRepository>,
         oauth_provider_repository: Arc<OAuthProviderRepository>,

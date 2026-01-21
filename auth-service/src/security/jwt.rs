@@ -213,6 +213,7 @@ impl JwtService {
         }
     }
 
+    #[must_use]
     pub fn get_access_token_expiration_seconds(&self) -> i64 {
         self.access_token_expiration_minutes * 60
     }

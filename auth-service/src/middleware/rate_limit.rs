@@ -41,7 +41,7 @@ impl RateLimiter {
             return true;
         }
 
-        self.check_limit(&self.ip_limits, ip, self.config.global_per_minute)
+        Self::check_limit(&self.ip_limits, ip, self.config.global_per_minute)
     }
 
     #[must_use]
@@ -50,11 +50,11 @@ impl RateLimiter {
             return true;
         }
 
-        let limit = custom_limit.map_or(self.config.global_per_minute, |l| l as u32);
-        self.check_limit(&self.api_key_limits, key_id, limit)
+        let limit = custom_limit.map_or(self.config.global_per_minute, |l| l.cast_unsigned());
+        Self::check_limit(&self.api_key_limits, key_id, limit)
     }
 
-    fn check_limit(&self, map: &DashMap<String, RateLimitBucket>, key: &str, limit: u32) -> bool {
+    fn check_limit(map: &DashMap<String, RateLimitBucket>, key: &str, limit: u32) -> bool {
         let now = Utc::now();
         let window_duration = Duration::minutes(1);
 

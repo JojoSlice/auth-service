@@ -124,7 +124,7 @@ impl AnomalyDetectionService {
             if let Some(lockout_until) = attempts.lockout_until {
                 if Utc::now() < lockout_until {
                     return Some(AnomalyResult::BruteForceDetected {
-                        attempts: attempts.failed_attempts.len() as u32,
+                        attempts: u32::try_from(attempts.failed_attempts.len()).unwrap_or(u32::MAX),
                         lockout_until,
                     });
                 }
@@ -153,7 +153,7 @@ impl AnomalyDetectionService {
         // Add new attempt
         entry.failed_attempts.push_back(now);
 
-        let attempt_count = entry.failed_attempts.len() as u32;
+        let attempt_count = u32::try_from(entry.failed_attempts.len()).unwrap_or(u32::MAX);
 
         // Check if we've exceeded the threshold
         if attempt_count >= self.config.max_failed_attempts {
@@ -374,8 +374,8 @@ mod tests {
         let service = AnomalyDetectionService::new(AnomalyConfig::default());
         let ip = "192.168.1.1";
 
-        service.record_failed_attempt(ip);
-        service.record_failed_attempt(ip);
+        let _ = service.record_failed_attempt(ip);
+        let _ = service.record_failed_attempt(ip);
         service.clear_failed_attempts(ip);
 
         // Should be able to fail again without immediate lockout

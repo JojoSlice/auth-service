@@ -65,6 +65,7 @@ pub fn extract_client_ip(request: &Request, addr: &SocketAddr) -> String {
 pub struct ClientIp(pub String);
 
 impl ClientIp {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }

@@ -92,6 +92,7 @@ impl Clone for EncryptionService {
     }
 }
 
+#[must_use]
 pub fn generate_encryption_key() -> String {
     let mut key = [0u8; 32];
     rand::rng().fill_bytes(&mut key);
